@@ -15,7 +15,8 @@ about_menu = ['Log in', 'Sign up', 'About us']
 
 app = Flask(__name__)
 app.secret_key = '1702school'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:brikivlui@db/1702school'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:brikivlui@db/1702school')
+
 db = SQLAlchemy(app)
 
 
