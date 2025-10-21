@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:latest
-    container_name: postgres_db
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -14,7 +13,6 @@ services:
 
   web:
     build: ./app
-    container_name: 1702app
     restart: always
     ports:
       - "5000:5000"
