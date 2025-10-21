@@ -28,7 +28,6 @@ services:
 
   compiler:
     image: gcc:latest
-    container_name: compiler
     command: tail -f /dev/null
     volumes:
       - ./uploads:/uploads
