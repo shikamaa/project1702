@@ -11,8 +11,6 @@ menu = [
     {"name": "Logout", "url": "logout"}
 ]
 
-about_menu = ['Log in', 'Sign up', 'About us']
-
 app = Flask(__name__)
 app.secret_key = '1702school'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:brikivlui@db/1702school')
@@ -39,8 +37,8 @@ class User(db.Model):
     def change_username(self, new_username):
         self.username = new_username
 
-    def change_password(self, new_password_hash):
-        self.password_hash = generate_password_hash(new_password_hash)
+    def change_password(self, new_password):
+        self.password_hash = generate_password_hash(new_password)
 
 
 @app.route('/')
@@ -82,14 +80,12 @@ def signup_page():
 
     return render_template('signup.html', title='Signup Page', menu=menu)
 
-
 @app.route('/tasks')
 def tasks():
     if 'user_in_session' in session:
         user = session['user_in_session']
         return render_template('tasks.html', title='Main page', user=user, menu=menu)
     return redirect(url_for('login_page'))
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -106,12 +102,10 @@ def login_page():
 
     return render_template('login.html', title='Docker Login page', error=error_message)
 
-
 @app.route('/logout')
 def logout():
     session.pop('user_in_session', None)
     return redirect(url_for('login_page'))
-
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -148,11 +142,9 @@ def settings():
 
     return render_template('settings.html', title='Settings', user=user_in_session, menu=menu)
 
-
 @app.route('/about')
 def about():
-    return render_template('about.html', title='About us')
-
+    return render_template('about.html', title='About us', menu = menu)
 
 @app.route('/compile', methods=['POST'])
 def compile_file():

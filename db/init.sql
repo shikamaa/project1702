@@ -6,9 +6,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash text not null,
     role integer default 0
 );
-/*
+
 CREATE TABLE IF NOT EXISTS tasks (
-    task_id bigserial PRIMARY KEY,
-    task_name varchar(50) not null unique
+    task_id BIGSERIAL PRIMARY KEY,
+    task_name VARCHAR(50) NOT NULL UNIQUE,
+    task_link TEXT NOT NULL
 );
-*/
