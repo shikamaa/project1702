@@ -33,27 +33,23 @@ This web application provides a secure platform for user management and C code c
 * **Containerization**: Docker, Docker Compose
 * **Compiler**: GCC in isolated Docker container
 
-Future Enhancements
-Planned Features
+## Future Enhancements
 
-Role-Based Access Control (RBAC)
+### Planned Features
 
-Admin dashboard
-User management interface
-Permission-based feature access
+* **Role-Based Access Control (RBAC)**
+  - Admin dashboard
+  - User management interface
+  - Permission-based feature access
+  
+* **Enhanced Compilation**
+  - Support for multiple programming languages
+  - Input/output testing framework
+  - Code execution time limits
+  - Resource usage monitoring
 
-
-Enhanced Compilation
-
-Support for multiple programming languages
-Input/output testing framework
-Code execution time limits
-Resource usage monitoring
-
-
-UI Improvements
-
-Rich text editor for code
-Syntax highlighting
-Code history and versioning
-Collaborative coding features
+* **UI Improvements**
+  - Rich text editor for code
+  - Syntax highlighting
+  - Code history and versioning
+  - Collaborative coding features
