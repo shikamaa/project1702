@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> {{title }} </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
+</head>
+<body>
+     <ul>
+        {% for m in menu %}
+        <li class="nav"> <a href="{{ url_for(m.url) }} ">{{ m.name }} </a></li>
+        {% endfor %}
+    </ul>
+    <p>This is a {{ title }} page.</p>   
+</body>
+</html>

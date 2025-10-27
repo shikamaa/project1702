@@ -10,11 +10,18 @@ menu = [
     {"name": "Settings", "url": "settings"},
     {"name": "Logout", "url": "logout"}
 ]
-
+def menu1():
+    reg_menu = [
+        {"name": "Tasks", "url": "tasks"},
+        {"name": "Settings", "url": "settings"},
+        {"name": "Signup", "url": "signup_page"},
+        {"name": "Login", "url": "login_page"}
+    ]
+    return reg_menu
 app = Flask(__name__)
 app.secret_key = '1702school'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:brikivlui@db/1702school')
-
+app.config['PERMANENT_SESSION_LIFETIME'] = 1800
 db = SQLAlchemy(app)
 
 
@@ -76,9 +83,10 @@ def signup_page():
             return render_template('signup.html', title='Signup Page', error='Database error')
 
         session['user_in_session'] = new_user.username
+        session.permanent = True
         return redirect(url_for('tasks'))
 
-    return render_template('signup.html', title='Signup Page', menu=menu)
+    return render_template('signup.html', title='Signup Page', menu=menu1())
 
 @app.route('/tasks')
 def tasks():
@@ -96,11 +104,12 @@ def login_page():
 
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
+            session.permanent = True
             session['user_in_session'] = user.username
             return redirect(url_for('tasks'))
         error_message = 'Incorrect username or password'
 
-    return render_template('login.html', title='Docker Login page', error=error_message)
+    return render_template('login.html', title='Docker Login page', error=error_message, menu = menu1())
 
 @app.route('/logout')
 def logout():
@@ -182,7 +191,6 @@ def compile_file():
         output = f"Error running compiler container: {e}"
 
     return render_template('tasks.html', title='Main page', user=current_user, menu=menu, output=output)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=5000)

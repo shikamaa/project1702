@@ -3,9 +3,14 @@
 <head>
     <title>{{ title }}</title>
     <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
 </head>
 <body>
-
+    <ul>
+        {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+        {% endfor %}
+    </ul>
 <form method="POST" action="{{ url_for('signup_page') }}">
     <label for="first_name">Name</label>
     <input type="text" id="first_name" name="first_name" required><br><br>
