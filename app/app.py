@@ -6,7 +6,6 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# Сначала создаем приложение и db
 app = Flask(__name__)
 app.secret_key = '1702school'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:admin1702@db/1702school')
@@ -14,7 +13,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Вспомогательные функции для меню
+
 def menu():
     return [
         {"name": "Tasks", "url": "tasks"},
@@ -24,13 +23,12 @@ def menu():
 
 def menu1():
     return [
-        {"name": "Tasks", "url": "tasks"},
-        {"name": "Settings", "url": "settings"},
+        #{"name": "Tasks", "url": "tasks"},
+        #{"name": "Settings", "url": "settings"},
         {"name": "Signup", "url": "signup_page"},
         {"name": "Login", "url": "login_page"}
     ]
 
-# МОДЕЛИ (после создания db)
 class User(db.Model):
     __tablename__ = 'user_table'
     user_id = db.Column(db.BigInteger, primary_key=True)
@@ -80,7 +78,6 @@ class Submission(db.Model):
     def __repr__(self):
         return f'<Submission {self.submission_id}>'
 
-# МАРШРУТЫ
 @app.route('/')
 @app.route('/index')
 @app.route('/idx')
@@ -122,12 +119,27 @@ def signup_page():
 
 @app.route('/tasks')
 def tasks():
-    if 'user_in_session' in session:
-        user = session['user_in_session']
-        tasks = Task.query.filter_by(task_id=1).first()
-        task_cases = Task.query.filter_by(task_id=1).first()
-        return render_template('tasks.html', title='Main page', user=user, menu=menu(), tasks=tasks, task_cases=task_cases)
-    return redirect(url_for('login_page'))
+    if 'user_in_session' not in session:
+        return redirect(url_for('login_page'))
+    user = session['user_in_session']
+    all_tasks = Task.query.all()
+    return render_template('tasks.html', title='Main page', user=user, menu=menu(), tasks=all_tasks)
+
+
+@app.route('/tasks/<int:task_id>')
+def task_detailed(task_id):
+    if 'user_in_session' not in session:
+        return redirect(url_for('login_page'))
+    
+    user = session['user_in_session']
+    task = Task.query.get_or_404(task_id)
+    
+    return render_template('task_detail.html', 
+                         title=task.task_name, 
+                         user=user, 
+                         menu=menu(), 
+                         task=task)  
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -187,7 +199,7 @@ def settings():
 
 @app.route('/about')
 def about():
-    return render_template('about.html', title='About us', menu=menu())
+    return render_template('about.html', title='About us', menu=menu1())
 
 @app.route('/compile', methods=['POST'])
 def compile_file():

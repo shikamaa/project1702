@@ -1,35 +1,56 @@
 services:
   db:
-    image: postgres:latest
+    container_name: dbase
+    image: postgres:15-alpine
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: brikivlui
+      POSTGRES_PASSWORD: admin1702
       POSTGRES_DB: 1702school
+      POSTGRES_INITDB_ARGS: "-E UTF8"
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - 1702data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
   web:
+    container_name: wsgiapp
     build: ./app
     restart: always
     ports:
       - "5000:5000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:brikivlui@db/1702school
+      DATABASE_URL: postgresql://postgres:admin1702@db:5432/1702school
+      PYTHONUNBUFFERED: 1
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - ./uploads:/uploads
+    networks:
+      - app-network
 
   compiler:
     container_name: compiler
     image: gcc:latest
+    restart: always
     command: tail -f /dev/null
     volumes:
       - ./uploads:/uploads
+    networks:
+      - app-network
 
 volumes:
-  pgdata:
+  1702data:
+
+networks:
+  app-network:
+    name: app-network
+    driver: bridge

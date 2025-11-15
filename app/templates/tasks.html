@@ -3,7 +3,7 @@
 <head>
     <title>Tasks</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <ul>
@@ -14,41 +14,23 @@
     
     <h2>Welcome, {{ user }}!</h2>
     
-    {% if task %}
-    <div class="task-container">
-        <h3>{{ task.task_name }}</h3>
-        <p>{{ task.task_description }}</p>
-        
-        {% if task.test_cases %}
-        <div class="test-cases">
-            <h4>Test Cases:</h4>
-            <ul>
-            {% for test in task.test_cases %}
-                <li>
-                    <strong>Input:</strong> {{ test.input }}<br>
-                    <strong>Expected Output:</strong> {{ test.output }}
-                </li>
-            {% endfor %}
-            </ul>
+    <h3>Available Tasks:</h3>
+    
+    {% if tasks %}
+    <div class="tasks-list">
+        {% for task in tasks %}
+        <div class="task-card">
+            <h3>
+                <a href="{{ url_for('task_detailed', task_id=task.task_id) }}">
+                    {{ task.task_name }}
+                </a>
+            </h3>
+            <p>{{ task.task_description[:100] }}{% if task.task_description|length > 100 %}...{% endif %}</p>
         </div>
-        {% endif %}
+        {% endfor %}
     </div>
     {% else %}
-    <p>No task available</p>
+    <p>No tasks available</p>
     {% endif %}
-    
-    <h3>Submit Your Solution</h3>
-    <form action="{{ url_for('compile_file') }}" method="POST" enctype="multipart/form-data">
-        <label for="file">Choose your C file:</label>
-        <input type="file" id="file" name="file" accept=".c" required>
-        <br><br>
-        <button type="submit">Compile and Test</button>
-    </form>
-    
-    {% if output %}
-    <h3>Result:</h3>
-    <pre>{{ output }}</pre>
-    {% endif %}
-
 </body>
 </html>
