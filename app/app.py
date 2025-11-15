@@ -1,45 +1,51 @@
-from flask import Flask, request, url_for, render_template, session, redirect, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 import os
 import subprocess
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
-menu = [
-    {"name": "Tasks", "url": "tasks"},
-    {"name": "Settings", "url": "settings"},
-    {"name": "Logout", "url": "logout"}
-]
+# Сначала создаем приложение и db
+app = Flask(__name__)
+app.secret_key = '1702school'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:admin1702@db/1702school')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Вспомогательные функции для меню
+def menu():
+    return [
+        {"name": "Tasks", "url": "tasks"},
+        {"name": "Settings", "url": "settings"},
+        {"name": "Logout", "url": "logout"}
+    ]
+
 def menu1():
-    reg_menu = [
+    return [
         {"name": "Tasks", "url": "tasks"},
         {"name": "Settings", "url": "settings"},
         {"name": "Signup", "url": "signup_page"},
         {"name": "Login", "url": "login_page"}
     ]
-    return reg_menu
-app = Flask(__name__)
-app.secret_key = '1702school'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:brikivlui@db/1702school')
-app.config['PERMANENT_SESSION_LIFETIME'] = 1800
-db = SQLAlchemy(app)
 
-
+# МОДЕЛИ (после создания db)
 class User(db.Model):
-    __tablename__ = 'users'
+    __tablename__ = 'user_table'
     user_id = db.Column(db.BigInteger, primary_key=True)
     username = db.Column(db.String(25), unique=True, nullable=False)
     password_hash = db.Column(db.Text, nullable=False)
     first_name = db.Column(db.Text, nullable=False)
     last_name = db.Column(db.Text, nullable=False)
-    role = db.Column(db.Integer)
+    is_admin = db.Column(db.Integer)
 
-    def __init__(self, username, password_hash, first_name=None, last_name=None, role=None):
+    def __init__(self, username, password_hash, first_name=None, last_name=None, is_admin=None):
         self.username = username
         self.password_hash = password_hash
         self.first_name = first_name
         self.last_name = last_name
-        self.role = role
+        self.is_admin = is_admin
 
     def change_username(self, new_username):
         self.username = new_username
@@ -47,13 +53,39 @@ class User(db.Model):
     def change_password(self, new_password):
         self.password_hash = generate_password_hash(new_password)
 
+class Task(db.Model):
+    __tablename__ = 'task'
+    task_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    task_name = db.Column(db.String(200), unique=True, nullable=False)
+    task_description = db.Column(db.Text)
+    test_cases = db.Column(db.JSON)
 
+    def __repr__(self):
+        return f'<Task {self.task_id}: {self.task_name}>'
+
+class Submission(db.Model):
+    __tablename__ = 'submission'
+    
+    submission_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.BigInteger, db.ForeignKey('user_table.user_id'), nullable=False)
+    task_id = db.Column(db.BigInteger, db.ForeignKey('task.task_id'), nullable=False)
+    
+    code = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    passed_tests = db.Column(db.Integer, default=0)
+    total_tests = db.Column(db.Integer, default=0)
+    error_message = db.Column(db.Text)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Submission {self.submission_id}>'
+
+# МАРШРУТЫ
 @app.route('/')
 @app.route('/index')
 @app.route('/idx')
 def main_page():
     return render_template('login.html', title='Docker 1702 Main page')
-
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_page():
@@ -65,14 +97,14 @@ def signup_page():
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
-            return render_template('signup.html', title='Signup Page', error='User already exists')
+            return render_template('signup.html', title='Signup Page', error='User already exists', menu=menu1())
 
         new_user = User(
             username=username,
             password_hash=generate_password_hash(password),
             first_name=name,
             last_name=last_name,
-            role=0
+            is_admin=0
         )
         try:
             db.session.add(new_user)
@@ -80,7 +112,7 @@ def signup_page():
         except Exception:
             db.session.rollback()
             flash('Database error')
-            return render_template('signup.html', title='Signup Page', error='Database error')
+            return render_template('signup.html', title='Signup Page', error='Database error', menu=menu1())
 
         session['user_in_session'] = new_user.username
         session.permanent = True
@@ -92,7 +124,9 @@ def signup_page():
 def tasks():
     if 'user_in_session' in session:
         user = session['user_in_session']
-        return render_template('tasks.html', title='Main page', user=user, menu=menu)
+        tasks = Task.query.filter_by(task_id=1).first()
+        task_cases = Task.query.filter_by(task_id=1).first()
+        return render_template('tasks.html', title='Main page', user=user, menu=menu(), tasks=tasks, task_cases=task_cases)
     return redirect(url_for('login_page'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -109,7 +143,7 @@ def login_page():
             return redirect(url_for('tasks'))
         error_message = 'Incorrect username or password'
 
-    return render_template('login.html', title='Docker Login page', error=error_message, menu = menu1())
+    return render_template('login.html', title='Docker Login page', error=error_message, menu=menu1())
 
 @app.route('/logout')
 def logout():
@@ -149,11 +183,11 @@ def settings():
             else:
                 flash('Username already exists')
 
-    return render_template('settings.html', title='Settings', user=user_in_session, menu=menu)
+    return render_template('settings.html', title='Settings', user=user_in_session, menu=menu())
 
 @app.route('/about')
 def about():
-    return render_template('about.html', title='About us', menu = menu)
+    return render_template('about.html', title='About us', menu=menu())
 
 @app.route('/compile', methods=['POST'])
 def compile_file():
@@ -185,12 +219,14 @@ def compile_file():
             run_result = subprocess.run([
                 "docker", "exec", "compiler", "/uploads/output"
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            output += "\nProgram output\n" + run_result.stdout + run_result.stderr
+            output += "\nResult of the program\n" + run_result.stdout + run_result.stderr
 
     except Exception as e:
         output = f"Error running compiler container: {e}"
 
-    return render_template('tasks.html', title='Main page', user=current_user, menu=menu, output=output)
+    return render_template('tasks.html', title='Main page', user=current_user, menu=menu(), output=output)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,18 +1,15 @@
-body, html {
-  margin: 0;
-  padding: 0;
-}
-
 ul {
   list-style-type: none;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #587ec5;
+  background-color: hsl(216, 71%, 57%);
 }
+
 ul li {
   float: left;
 }
+
 ul li a {
   display: block;
   color: white;
@@ -20,6 +17,7 @@ ul li a {
   padding: 14px 16px;
   text-decoration: none;
 }
+
 ul li a:hover {
-  background-color: #4e7bcf;
+  background-color: hsl(216, 71%, 57%);
 }
