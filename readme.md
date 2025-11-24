@@ -13,19 +13,17 @@ This web application provides a secure platform for user management and C code c
 * Role field for future role-based access control
 
 ### Compilation & Testing Service
-
 * Upload C source files (.c)
 * Isolated compilation in Docker container using GCC
 * Automatic test case execution
 * Detailed test results with pass/fail status
 * Input/output comparison for each test case
 * Submission tracking with status codes:
-
-accepted - All tests passed
-wrong_answer - Some tests failed
-compilation_error - Code failed to compile
-timeout - Execution exceeded time limit
-runtime_error - Runtime exception occurred
+  - `accepted` - All tests passed
+  - `wrong_answer` - Some tests failed
+  - `compilation_error` - Code failed to compile
+  - `timeout` - Execution exceeded time limit
+  - `runtime_error` - Runtime exception occurred
 
 ### Navigation & UI
 * Dynamic menu system
