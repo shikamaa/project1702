@@ -1,9 +1,14 @@
-FROM python:3.13.5-slim
-WORKDIR /app
+FROM python:3.12-slim
+
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /opt/venv
+
 COPY requirements.txt .
-RUN python3 -m venv venv \
-    && ./venv/bin/pip install --upgrade pip \
-    && ./venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN . /opt/venv/bin/activate && pip install -r requirements.txt
+
 COPY . .
-EXPOSE 5000
-CMD ["./venv/bin/python", "app.py"]
+
+CMD . /opt/venv/bin/activate && exec python app.py

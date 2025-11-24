@@ -117,30 +117,6 @@ def signup_page():
 
     return render_template('signup.html', title='Signup Page', menu=menu1())
 
-@app.route('/tasks')
-def tasks():
-    if 'user_in_session' not in session:
-        return redirect(url_for('login_page'))
-    user = session['user_in_session']
-    all_tasks = Task.query.all()
-    return render_template('tasks.html', title='Main page', user=user, menu=menu(), tasks=all_tasks)
-
-
-@app.route('/tasks/<int:task_id>')
-def task_detailed(task_id):
-    if 'user_in_session' not in session:
-        return redirect(url_for('login_page'))
-    
-    user = session['user_in_session']
-    task = Task.query.get_or_404(task_id)
-    
-    return render_template('task_detail.html', 
-                         title=task.task_name, 
-                         user=user, 
-                         menu=menu(), 
-                         task=task)  
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     error_message = None
@@ -197,9 +173,30 @@ def settings():
 
     return render_template('settings.html', title='Settings', user=user_in_session, menu=menu())
 
-@app.route('/about')
-def about():
-    return render_template('about.html', title='About us', menu=menu1())
+@app.route('/tasks')
+def tasks():
+    if 'user_in_session' not in session:
+        return redirect(url_for('login_page'))
+    user = session['user_in_session']
+    all_tasks = Task.query.all()
+    return render_template('tasks.html', title='Main page', user=user, menu=menu(), tasks=all_tasks)
+
+
+@app.route('/tasks/<int:task_id>')
+def task_detailed(task_id):
+    if 'user_in_session' not in session:
+        return redirect(url_for('login_page'))
+    
+    user = session['user_in_session']
+    task = Task.query.get_or_404(task_id)
+    
+    return render_template('task_detail.html', 
+                         title=task.task_name, 
+                         user=user, 
+                         menu=menu(), 
+                         task=task,
+                         output=None)
+
 
 @app.route('/compile', methods=['POST'])
 def compile_file():
@@ -208,35 +205,116 @@ def compile_file():
         return redirect(url_for('login_page'))
 
     current_user = session['user_in_session']
+    task_id = request.form.get('task_id')
+    
+    task = Task.query.get_or_404(task_id)
+    
     file = request.files.get('file')
     if not file:
         flash("No file uploaded")
-        return redirect(url_for('tasks'))
+        return redirect(url_for('task_detailed', task_id=task_id))
 
     upload_folder = "/uploads"
     os.makedirs(upload_folder, exist_ok=True)
     filename = secure_filename(file.filename)
     filepath = os.path.join(upload_folder, filename)
     file.save(filepath)
+    
+    with open(filepath, 'r') as f:
+        code_content = f.read()
+
+    output = ""
+    status = "pending"
+    passed_tests = 0
+    total_tests = len(task.test_cases) if task.test_cases else 0
+    error_message = None
 
     try:
         result = subprocess.run([
             "docker", "exec", "compiler",
             "gcc", f"/uploads/{filename}", "-o", f"/uploads/output"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
 
-        output = result.stdout + result.stderr
+        if result.returncode != 0:
+            output = "Compilation Error:\n" + result.stderr
+            status = "compilation_error"
+            error_message = result.stderr
+        else:
+            output = "✓ Compilation successful\n\n"
+            
+            if task.test_cases:
+                output += "Running test cases:\n" + "="*50 + "\n"
+                
+                for i, test_case in enumerate(task.test_cases, 1):
+                    test_input = test_case.get('input', '')
+                    expected_output = test_case.get('output', '').strip()
+                    
+                    run_result = subprocess.run([
+                        "docker", "exec", "-i", "compiler", "/uploads/output"
+                    ], input=test_input, stdout=subprocess.PIPE, 
+                       stderr=subprocess.PIPE, text=True, timeout=5)
+                    
+                    actual_output = run_result.stdout.strip()
+                    
+                    if actual_output == expected_output:
+                        output += f"Test {i}: ✓ PASSED\n"
+                        output += f"  Input: {test_input or '(empty)'}\n"
+                        output += f"  Expected: {expected_output}\n"
+                        output += f"  Got: {actual_output}\n\n"
+                        passed_tests += 1
+                    else:
+                        output += f"Test {i}: ✗ FAILED\n"
+                        output += f"  Input: {test_input or '(empty)'}\n"
+                        output += f"  Expected: {expected_output}\n"
+                        output += f"  Got: {actual_output}\n\n"
+                
+                output += "="*50 + "\n"
+                output += f"Result: {passed_tests}/{total_tests} tests passed\n"
+                
+                if passed_tests == total_tests:
+                    status = "accepted"
+                else:
+                    status = "wrong_answer"
+            else:
+                run_result = subprocess.run([
+                    "docker", "exec", "compiler", "/uploads/output"
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                output += "\nProgram output:\n" + run_result.stdout
+                if run_result.stderr:
+                    output += "\nErrors:\n" + run_result.stderr
+                status = "completed"
 
-        if result.returncode == 0:
-            run_result = subprocess.run([
-                "docker", "exec", "compiler", "/uploads/output"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            output += "\nResult of the program\n" + run_result.stdout + run_result.stderr
-
+    except subprocess.TimeoutExpired:
+        output = "Error: Program execution timed out (time limit exceeded)"
+        status = "timeout"
+        error_message = "Time limit exceeded"
     except Exception as e:
-        output = f"Error running compiler container: {e}"
+        output = f"Error: {str(e)}"
+        status = "runtime_error"
+        error_message = str(e)
+    try:
+        user_obj = User.query.filter_by(username=current_user).first()
+        submission = Submission(
+            user_id=user_obj.user_id,
+            task_id=task_id,
+            code=code_content,
+            status=status,
+            passed_tests=passed_tests,
+            total_tests=total_tests,
+            error_message=error_message
+        )
+        db.session.add(submission)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving submission: {e}")
 
-    return render_template('tasks.html', title='Main page', user=current_user, menu=menu(), output=output)
+    return render_template('task_detail.html', 
+                         title=task.task_name, 
+                         user=current_user, 
+                         menu=menu(), 
+                         task=task,
+                         output=output)
 
 if __name__ == '__main__':
     with app.app_context():

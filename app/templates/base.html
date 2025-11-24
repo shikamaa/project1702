@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title> {{title }} </title>
-    <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-     <ul>
-        {% for m in menu %}
-        <li class="nav"> <a href="{{ url_for(m.url) }} ">{{ m.name }} </a></li>
-        {% endfor %}
-    </ul>
-    <p>This is a {{ title }} page.</p>   
+    <nav>
+        {% if menu %}
+            {% for item in menu %}
+                <a href="{{ url_for(item.url) }}">{{ item.name }}</a>
+            {% endfor %}
+        {% endif %}
+    </nav>
+    
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
 </body>
 </html>
