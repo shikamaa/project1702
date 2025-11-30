@@ -12,7 +12,7 @@
         {% endfor %}
     </ul>
 
-        <form method="POST" action="{{ url_for('login_page') }}">
+        <form method="POST" action="{{ url_for('routes_bp.login_page') }}">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required><br><br>
 

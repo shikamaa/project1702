@@ -14,7 +14,7 @@
 
     <h2>Settings of {{ user }}</h2>
 
-    <form method = "POST" action = "{{ url_for('settings')}}">
+    <form method = "POST" action = "{{ url_for('routes_bp.settings')}}">
         <label for = "new_username">You can change your username</label>
         <input type = "text" id = "new_username" name = "new_username">
         
@@ -22,7 +22,7 @@
     <br>
     <br>
     
-    <form method="POST" action="{{ url_for('settings') }}">
+    <form method="POST" action="{{ url_for('routes_bp.settings') }}">
         <label for="password">Enter your current password:</label>
         <input type="password" id="password" name="password" required>
         <br><br>
@@ -35,7 +35,7 @@
     </form>
 
     <br>
-    <form action="{{ url_for('logout') }}" method="GET">
+    <form action="{{ url_for('routes_bp.logout') }}" method="GET">
         <button type="submit">Logout</button>
     </form>
 </body>
