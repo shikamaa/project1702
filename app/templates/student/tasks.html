@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tasks</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <ul>
+    {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+    {% endfor %}
+    </ul>
+    
+    <h2>Welcome, {{ user }}!</h2>
+    
+    <h3>Available Tasks:</h3>
+    
+    {% if tasks %}
+    <div class="tasks-list">
+        {% for task in tasks %}
+        <div class="task-card">
+            <h3>
+                <a href="{{ url_for('routes_bp.task_detailed', task_id=task.task_id) }}">
+                    {{ task.task_name }}
+                </a>
+            </h3>
+            <p>{{ task.task_description[:100] }}{% if task.task_description %}...{% endif %}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No tasks available</p>
+    {% endif %}
+</body>
+</html>
