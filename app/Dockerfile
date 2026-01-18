@@ -1,8 +1,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update && \
-    apt-get install -y docker.io && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y docker.io
 
 RUN python3 -m venv /opt/venv
 

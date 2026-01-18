@@ -2,14 +2,12 @@ services:
   db:
     container_name: dbase
     image: postgres:15-alpine
-    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin1702
       POSTGRES_DB: 1702school
-      POSTGRES_INITDB_ARGS: "-E UTF8"
     ports:
-      - "5432:5432"
+      - "3432:5432"
     volumes:
       - 1702data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d 
@@ -18,13 +16,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 40s
     networks:
       - app-network
 
   web:
     container_name: wsgiapp
     build: ./app
-    restart: always
     ports:
       - "5000:5000"
     depends_on:
@@ -32,7 +30,6 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:admin1702@db:5432/1702school
-      PYTHONUNBUFFERED: 1
     volumes:
       - ./uploads:/uploads
       - /var/run/docker.sock:/var/run/docker.sock 
@@ -42,7 +39,6 @@ services:
   compiler:
     container_name: compiler
     image: gcc:latest
-    restart: always
     command: tail -f /dev/null
     volumes:
       - ./uploads:/uploads
@@ -54,5 +50,3 @@ volumes:
 
 networks:
   app-network:
-    name: app-network
-    driver: bridge
