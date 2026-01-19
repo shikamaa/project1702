@@ -10,7 +10,35 @@ import time
 
 routes_bp = Blueprint('routes_bp', __name__)
 teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/teacher')
+admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
 
+@admin_bp.route('/users')
+def admin_users():
+    if 'user_in_session' not in session:
+        return redirect(url_for('routes_bp.login_page'))
+    
+    user = User.query.filter_by(username=session['user_in_session']).first()
+    
+    if not user:
+        session.pop('user_in_session', None)
+        return redirect(url_for('routes_bp.login_page'))
+    
+    if user.user_role.value != 'ADMIN':
+        flash("Access denied. Admin rights required.")
+        return redirect(url_for('routes_bp.tasks'))
+    
+    all_users = User.query.order_by(User.user_role, User.username).all()
+    
+    return render_template(
+        'admin_users.html',
+        title='User Management',
+        user=session['user_in_session'],
+        menu=logged_user_menu(),
+        users=all_users
+    )
+@routes_bp.route('/test')
+def testf():
+    return render_template('base.html', title = 'base_test')
 
 @teacher_bp.route('/submissions')
 def ret_submissions():
@@ -89,25 +117,29 @@ def user_submissions():
         submissions=submissions
     )
 
-@routes_bp.route('/user_submissions/<int:submission_id>')
+@routes_bp.route('/submission/<int:submission_id>')
 def submission_detail(submission_id):
     if 'user_in_session' not in session:
         return redirect(url_for('routes_bp.login_page'))
     
-    user = session['user_in_session']
-    current_user = User.query.filter_by(username=user).first()
+    user = User.query.filter_by(username=session['user_in_session']).first()
+    if not user:
+        session.pop('user_in_session', None)
+        return redirect(url_for('routes_bp.login_page'))
     
     submission = Submission.query.get_or_404(submission_id)
     
-    if submission.user_id != current_user.user_id:
-        flash('Access denied')
-        return redirect(url_for('routes_bp.user_submissions'))
+    if submission.user_id != user.user_id and user.user_role.value not in ['teacher', 'admin']:
+        flash("Access denied")
+        return redirect(url_for('routes_bp.tasks'))
     
-    return render_template('submission_detail.html',
-                          title='Submission Details',
-                          user=user,
-                          menu=logged_user_menu(),
-                          submission=submission)
+    return render_template(
+        'submission_detail.html',
+        title=f'Submission #{submission_id}',
+        user=session['user_in_session'],
+        menu=logged_user_menu(),
+        submission=submission
+    )
 
 
 @routes_bp.route('/')
@@ -215,7 +247,7 @@ def tasks():
     return render_template('tasks.html', title='Main page', user=user, menu=logged_user_menu(), tasks=all_tasks)
 
 @routes_bp.route('/tasks/<int:task_id>')
-def task_detailed(task_id):
+def task_detail(task_id):
     if 'user_in_session' not in session:
         return redirect(url_for('routes_bp.login_page'))
 
@@ -228,7 +260,6 @@ def task_detailed(task_id):
                           menu=logged_user_menu(),
                           task=task,
                          output=None)
-
 
 @routes_bp.route('/compile', methods=['POST'])
 def compile_file():
@@ -248,7 +279,7 @@ def compile_file():
     file = request.files.get('file')
     if not file:
         flash("No file uploaded")
-        return redirect(url_for('routes_bp.task_detailed', task_id=task_id))
+        return redirect(url_for('routes_bp.task_detail', task_id=task_id))
 
     upload_folder = "/uploads"
     os.makedirs(upload_folder, exist_ok=True)
@@ -369,7 +400,7 @@ def compile_file():
                 output += f"Total Time: {total_time:.3f}s\n"
                 
                 if status not in ["timeout", "runtime_error", "compilation_error"]:
-                    status = "accepted" if passed_tests == total_tests else "wrong_answer"
+                    status = "accepted" if passed_tests == total_tests else "wrong answer"
             else:
                 try:
                     run_result = subprocess.run([

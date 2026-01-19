@@ -35,9 +35,12 @@ def logged_user_menu():
 
     if role == "admin":
         return [
-            {"name": "Dashboard", "url": "routes_bp.admin_dashboard"},
-            {"name": "Users", "url": "routes_bp.admin_users"},
-            {"name": "Tasks Management", "url": "routes_bp.admin_tasks"},
+            {"name": "Tasks", "url": "routes_bp.tasks"},
+            {"name": "My Submissions", "url": "routes_bp.user_submissions"},
+            {"name": "Settings", "url": "routes_bp.settings"},
+            {"name": "Users", "url": "admin_bp.admin_users"},
+            #{"name": "Dashboard", "url": "routes_bp.admin_dashboard"},
+            #{"name": "Tasks Management", "url": "routes_bp.admin_tasks"},
             {"name": "Logout", "url": "routes_bp.logout"}
         ]
 

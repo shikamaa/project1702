@@ -3,7 +3,7 @@ from os import getenv
 from werkzeug.security import generate_password_hash
 
 from database1702 import db
-from routes import routes_bp, teacher_bp
+from routes import routes_bp, teacher_bp, admin_bp
 
 def create_app():
     app = Flask(__name__)
@@ -14,7 +14,7 @@ def create_app():
 
     app.register_blueprint(routes_bp)
     app.register_blueprint(teacher_bp)
-
+    app.register_blueprint(admin_bp)
     return app
 
 app = create_app()
