@@ -4,10 +4,15 @@ from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from flask_login import LoginManager
 from decorators import * 
+import secrets
+
+load_dotenv()
+
 
 app = Flask(__name__)
-app.secret_key = '1702school'
-app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL', 'postgresql://postgres:admin1702@db/1702school')
+app.secret_key = getenv('SECRET_KEY')
+app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 login_manager = LoginManager()
 login_manager.init_app(app)

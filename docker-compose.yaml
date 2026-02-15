@@ -2,10 +2,8 @@ services:
   db:
     container_name: dbase
     image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin1702
-      POSTGRES_DB: 1702school
+    env_file:
+      - .env
     ports:
       - "3432:5432"
     volumes:
@@ -15,7 +13,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 10s
     networks:
       - app-network
 
@@ -27,9 +25,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://postgres:admin1702@db:5432/1702school
-      HOST_PROJECT_PATH: ${PROJECT_PATH} 
+      - HOST_PROJECT_PATH=${PROJECT_PATH}
     volumes:
       - ./uploads:/uploads
       - /var/run/docker.sock:/var/run/docker.sock 

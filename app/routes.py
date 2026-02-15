@@ -65,7 +65,7 @@ def admin_tasks():
 @admin_required
 def admin_users():
     all_users = User.query.order_by(User.user_role, User.username).all()
-    return render_template('admin/admin_users.html',
+    return render_template('admin/users.html',
                          title='User Management',
                          menu=logged_user_menu(),
                          users=all_users)
