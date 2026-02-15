@@ -1,153 +1,149 @@
-from flask import render_template, request, redirect, url_for, session, flash, Blueprint
+from flask import render_template, request, redirect, url_for, flash, Blueprint, current_app
 import os
 import subprocess
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from nav import logged_user_menu, unlogged_user_menu
-from models import User, Submission, Task, UserType
+from models import User, Submission, Task, STUDENT, ADMIN, TEACHER, UserType
 from database1702 import db
 import time
+from flask_login import login_required, logout_user, current_user, login_user
+from decorators import admin_required, teacher_required
+import uuid
 
-routes_bp = Blueprint('routes_bp', __name__)
-teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/teacher')
-admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
+routes = Blueprint('routes', __name__, template_folder ='../template')
+teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/teacher', template_folder='../templates')
+admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin',template_folder='../templates')
+
+
+@teacher_bp.route('/student_submissions')
+@teacher_required
+def return_submissions():
+    submissions = Submission.query \
+        .join(User) \
+        .filter(User.user_role == STUDENT) \
+        .order_by(Submission.submitted_at.desc()) \
+        .all()
+    
+    return render_template('all_submissions.html', 
+                           submissions=submissions)
+
+@teacher_bp.route('/add_task')
+@teacher_required
+def add_task():
+    return render_template('add_task.html', menu=logged_user_menu())
+
+@admin_bp.route('/approve_task/<int:task_id>', methods=['POST'])
+@admin_required
+def approve_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    task.status = True
+    db.session.commit()
+    flash(f'Task "{task.task_name}" approved!')
+    return redirect(url_for('admin_bp.admin_tasks'))
+
+@admin_bp.route('/reject_task/<int:task_id>', methods=['POST'])
+@admin_required
+def reject_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    flash(f'Task "{task.task_name}" rejected!')
+    return redirect(url_for('admin_bp.admin_tasks'))
+
+@admin_bp.route('/accept_task')
+@admin_required
+def admin_tasks():
+    tasks_to_accept = Task.query.filter_by(status=False).all()
+    
+    return render_template('admin/accept_tasks.html', 
+                         title='Admin task manager',
+                         menu=logged_user_menu(),
+                         tasks_to_accept=tasks_to_accept)
 
 @admin_bp.route('/users')
+@admin_required
 def admin_users():
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-    
-    user = User.query.filter_by(username=session['user_in_session']).first()
-    
-    if not user:
-        session.pop('user_in_session', None)
-        return redirect(url_for('routes_bp.login_page'))
-    
-    if user.user_role.value != 'ADMIN':
-        flash("Access denied. Admin rights required.")
-        return redirect(url_for('routes_bp.tasks'))
-    
     all_users = User.query.order_by(User.user_role, User.username).all()
+    return render_template('admin/admin_users.html',
+                         title='User Management',
+                         menu=logged_user_menu(),
+                         users=all_users)
+
+@admin_bp.route('/demote_all', methods=['POST'])
+@admin_required
+def demote_all():
+    demote_count = User.query.filter(
+        User.username != current_user.username 
+    ).update({'user_role': STUDENT})
     
-    return render_template(
-        'admin_users.html',
-        title='User Management',
-        user=session['user_in_session'],
-        menu=logged_user_menu(),
-        users=all_users
-    )
-@routes_bp.route('/test')
-def testf():
-    return render_template('base.html', title = 'base_test')
-
-@teacher_bp.route('/submissions')
-def ret_submissions():
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-    
-    user = User.query.filter_by(username=session['user_in_session']).first()
-    
-    if not user:
-        session.pop('user_in_session', None)
-        return redirect(url_for('routes_bp.login_page'))
-    
-
-    if user.user_role.value not in ['teacher', 'admin']:
-        flash("Access denied")
-        return redirect(url_for('routes_bp.tasks'))
-    
-    submissions = Submission.query.order_by(
-        Submission.submitted_at.desc()
-    ).all()
-    
-    return render_template(
-        'view_submissions.html',
-        title='All Submissions',
-        user=session['user_in_session'],
-        menu=logged_user_menu(),
-        submissions=submissions
-    )
-
-@teacher_bp.route('/submission/<int:submission_id>/status', methods=['POST'])
-def change_submission_status(submission_id):
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-
-    user = User.query.filter_by(username=session['user_in_session']).first()
-
-    if not user or user.user_role.value != "teacher":
-        flash("Access denied")
-        return redirect(url_for('routes_bp.tasks'))
-
-    new_status = request.form.get('status')
-
-    submission = Submission.query.get_or_404(submission_id)
-    submission.status = new_status
-
     db.session.commit()
-    flash("Status updated successfully!")
+    flash(f'Demoted {demote_count} users to STUDENT role.')
+    return redirect(url_for('admin_bp.admin_users'))
 
-    return redirect(url_for('teacher_bp.ret_submissions'))
+@admin_bp.route('/users/<int:user_id>/role', methods=['POST'])
+@admin_required
+def change_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.user_id == current_user.user_id:
+        flash("You cannot change your own role.")
+        return redirect(url_for('admin_bp.admin_users'))
+
+    new_role = request.form.get('role')
+
+    try:
+        user.user_role = UserType[new_role]
+        db.session.commit()
+        flash(f"Role updated for {user.username}")
+    except KeyError:
+        flash("Invalid role.")
+
+    return redirect(url_for('admin_bp.admin_users'))
 
 
-@routes_bp.route('/user_submissions')
+@routes.route('/user_submissions')
+@teacher_required
 def user_submissions():
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-
-    current_user = User.query.filter_by(
-        username=session['user_in_session']
-    ).first()
-
-    if not current_user:
-        flash('User not found')
-        return redirect(url_for('routes_bp.login_page'))
-
     submissions = Submission.query.filter_by(
         user_id=current_user.user_id
     ).order_by(
         Submission.submitted_at.desc()
     ).all()
 
-    return render_template(
-        'user_submissions.html',
-        title='My Submissions',
-        user=current_user.username,
-        menu=logged_user_menu(),
-        submissions=submissions
-    )
+    return render_template('user_submissions.html',
+                         title='My Submissions',
+                         menu=logged_user_menu(),
+                         submissions=submissions)
 
-@routes_bp.route('/submission/<int:submission_id>')
+@routes.route('/submission/<int:submission_id>')
+@login_required
 def submission_detail(submission_id):
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-    
-    user = User.query.filter_by(username=session['user_in_session']).first()
-    if not user:
-        session.pop('user_in_session', None)
-        return redirect(url_for('routes_bp.login_page'))
-    
     submission = Submission.query.get_or_404(submission_id)
     
-    if submission.user_id != user.user_id and user.user_role.value not in ['teacher', 'admin']:
+    if submission.user_id != current_user.user_id and \
+       current_user.user_role not in (TEACHER, ADMIN):
         flash("Access denied")
-        return redirect(url_for('routes_bp.tasks'))
+        return redirect(url_for('routes.tasks'))
     
-    return render_template(
-        'submission_detail.html',
-        title=f'Submission #{submission_id}',
-        user=session['user_in_session'],
-        menu=logged_user_menu(),
-        submission=submission
-    )
+    return render_template('submission_detail.html',
+                         title=f'Submission #{submission_id}',
+                         menu=logged_user_menu(),
+                         submission=submission)
 
-
-@routes_bp.route('/')
+@routes.route('/')
 def main_page():
-    return render_template('login.html', title='1702 Main page')
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.tasks'))
+    return render_template('login.html', 
+                         title='1702 Main page',
+                         menu=unlogged_user_menu())
 
-@routes_bp.route('/signup', methods=['GET', 'POST'])
+@routes.route('/signup', methods=['GET', 'POST'])
 def signup_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.tasks'))
+    
     if request.method == 'POST':
         name = request.form.get('first_name')
         last_name = request.form.get('last_name')
@@ -156,72 +152,73 @@ def signup_page():
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
-            return render_template('signup.html', title='Signup Page', error='User already exists', menu=unlogged_user_menu())
+            flash('User already exists')
+            return render_template('signup.html', 
+                                 title='Signup Page',
+                                 menu=unlogged_user_menu())
 
         new_user = User(
             username=username,
             password_hash=generate_password_hash(password),
             first_name=name,
             last_name=last_name,
-            user_role=UserType.STUDENT
+            user_role=STUDENT
         )
         try:
             db.session.add(new_user)
             db.session.commit()
+            login_user(new_user)
+            return redirect(url_for('routes.tasks'))
         except Exception as e:
             db.session.rollback()
+            flash('Database error')
             print(f'error {e}')
-            return render_template('signup.html', title='Signup Page', error='Database error', menu=unlogged_user_menu())
 
-        session['user_in_session'] = new_user.username
-        session.permanent = True
-        return redirect(url_for('routes_bp.tasks'))
+    return render_template('signup.html', 
+                         title='Signup Page',
+                         menu=unlogged_user_menu())
 
-    return render_template('signup.html', title='Signup Page', menu=unlogged_user_menu())
-
-@routes_bp.route('/login', methods=['GET', 'POST'])
+@routes.route('/login', methods=['GET', 'POST'])
 def login_page():
-    error_message = None
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.tasks'))
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-
         user = User.query.filter_by(username=username).first()
+        
         if user and check_password_hash(user.password_hash, password):
-            session['user_in_session'] = user.username
-            session.permanent = True
-            return redirect(url_for('routes_bp.tasks'))
+            login_user(user, remember=True)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('routes.tasks'))
+        
+        flash('Incorrect username or password')
 
-        error_message = 'Incorrect username or password'
+    return render_template('login.html', 
+                         title='Login page',
+                         menu=unlogged_user_menu())
 
-    return render_template('login.html', title='Login page', error=error_message, menu=unlogged_user_menu())
-
-@routes_bp.route('/logout')
+@routes.route('/logout')
+@login_required
 def logout():
-    session.pop('user_in_session', None)
-    return redirect(url_for('routes_bp.login_page'))
+    logout_user()
+    return redirect(url_for('routes.login_page'))
 
-
-@routes_bp.route('/settings', methods=['GET', 'POST'])
-def settings():
-    if 'user_in_session' not in session:
-        flash('User is not authorized')
-        return redirect(url_for('routes_bp.login_page'))
-
-    user_in_session = session['user_in_session']
-    current_user = User.query.filter_by(username=user_in_session).first()
-
+@routes.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():   
     if request.method == 'POST':
         if 'new_password' in request.form:
             current_password = request.form.get('password')
             new_password = request.form.get('new_password')
 
-            if current_user and check_password_hash(current_user.password_hash, current_password):
+            if check_password_hash(current_user.password_hash, current_password):
                 current_user.password_hash = generate_password_hash(new_password)
                 db.session.commit()
                 flash('Password successfully changed. Please log in again.')
-                session.pop('user_in_session', None)
-                return redirect(url_for('routes_bp.login_page'))
+                logout_user()
+                return redirect(url_for('routes.login_page'))
             else:
                 flash('Incorrect current password!')
 
@@ -231,226 +228,179 @@ def settings():
                 current_user.username = new_username
                 db.session.commit()
                 flash('Username changed successfully')
-                session['user_in_session'] = new_username
             else:
                 flash('Username already exists')
 
-    return render_template('settings.html', title='Settings', user=user_in_session, menu=logged_user_menu())
+    return render_template('settings.html', 
+                         title='Settings',
+                         menu=logged_user_menu())
 
-
-@routes_bp.route('/tasks')
+@routes.route('/tasks')
+@login_required
 def tasks():
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-    user = session['user_in_session']
-    all_tasks = Task.query.all()
-    return render_template('tasks.html', title='Main page', user=user, menu=logged_user_menu(), tasks=all_tasks)
+    all_available_tasks = Task.query.filter_by(status='t').all()
+    return render_template('tasks.html', 
+                         title='Main page',
+                         menu=logged_user_menu(), 
+                         tasks=all_available_tasks)
 
-@routes_bp.route('/tasks/<int:task_id>')
+@routes.route('/tasks/<int:task_id>')
+@login_required
 def task_detail(task_id):
-    if 'user_in_session' not in session:
-        return redirect(url_for('routes_bp.login_page'))
-
-    user = session['user_in_session']
     task = Task.query.get_or_404(task_id)
-
     return render_template('task_detail.html',
                           title=task.task_name,
-                          user=user,
                           menu=logged_user_menu(),
                           task=task,
-                         output=None)
-
-@routes_bp.route('/compile', methods=['POST'])
+                          output=None)
+    
+@routes.route('/compile', methods=['POST'])
+@login_required
 def compile_file():
-    if 'user_in_session' not in session:
-        flash('User is not authorized')
-        return redirect(url_for('routes_bp.login_page'))
-
-    current_user = session['user_in_session']
     task_id = request.form.get('task_id')
-
     task = Task.query.get_or_404(task_id)
-
-    TIME_LIMIT_USER = float(task.time_limit)
-    TIME_LIMIT_REAL = TIME_LIMIT_USER + 0.2
-    MEMORY_LIMIT_KB = int(task.memory_limit) * 1024
-
     file = request.files.get('file')
+
     if not file:
         flash("No file uploaded")
-        return redirect(url_for('routes_bp.task_detail', task_id=task_id))
+        return redirect(url_for('routes.task_detail', task_id=task_id))
 
-    upload_folder = "/uploads"
-    os.makedirs(upload_folder, exist_ok=True)
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(upload_folder, filename)
-    file.save(filepath)
+    try:
+        code_content = file.read().decode('utf-8') 
+    except UnicodeDecodeError:
+        flash("File must be a valid text file (UTF-8).")
+        return redirect(url_for('routes.task_detail', task_id=task_id))
 
-    with open(filepath, 'r') as f:
-        code_content = f.read()
+    INTERNAL_UPLOAD_DIR = "/uploads"
+    host_project_path = os.environ.get('HOST_PROJECT_PATH', os.getcwd())
+    HOST_UPLOAD_DIR_FOR_DOCKER = os.path.join(host_project_path, "uploads")
+    
+    os.makedirs(INTERNAL_UPLOAD_DIR, exist_ok=True)
+    
+    unique_id = uuid.uuid4().hex
+    filename_c = f"{unique_id}.c"
+    filename_exe = f"{unique_id}"
+    internal_file_path = os.path.join(INTERNAL_UPLOAD_DIR, filename_c)
+    
+    with open(internal_file_path, 'w', encoding='utf-8') as f:
+        f.write(code_content)
 
-    output = ""
     status = "pending"
+    output_log = ""
     passed_tests = 0
-    total_tests = len(task.test_cases) if task.test_cases else 0
-    error_message = None
-    total_time = 0
+    total_tests = len(task.test_cases)
+    error_message_db = None
+    container_id = None
+
+    TIME_LIMIT = float(task.time_limit)
+    MEMORY_LIMIT_MB = int(task.memory_limit)
 
     try:
-        compile_result = subprocess.run([
-            "docker", "exec", "compiler",
-            "gcc", f"/uploads/{filename}", "-o", f"/uploads/output"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+        start_cmd = [
+            "docker", "run", "-d", "--rm",
+            "--network", "none",
+            "--cpus", "0.5",
+            "--memory", "128m",
+            "-v", f"{HOST_UPLOAD_DIR_FOR_DOCKER}:/app",
+            "-w", "/app",
+            "gcc:latest",
+            "sleep", "60"
+        ]
         
-        if compile_result.returncode != 0:
-            output = "Compilation Error:\n" + compile_result.stderr
+        res = subprocess.run(start_cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            raise Exception(f"Docker start failed: {res.stderr}")
+        
+        container_id = res.stdout.strip()
+        compile_cmd = [
+            "docker", "exec", container_id,
+            "gcc", filename_c, "-o", filename_exe, "-lm", "-O2"
+        ]
+        cmp_res = subprocess.run(compile_cmd, capture_output=True, text=True)
+
+        if cmp_res.returncode != 0:
             status = "compilation_error"
-            error_message = compile_result.stderr
+            clean_err = cmp_res.stderr.replace(filename_c, "source.c")
+            output_log = f"Compilation Error:\n{clean_err}"
+            error_message_db = "Compilation failed"
         else:
-            if task.test_cases:
-                output += f"Running test cases (Time Limit: {TIME_LIMIT_USER}s, Memory Limit: {task.memory_limit}MB):\n"
-                output += "="*70 + "\n"
+            output_log += "Compilation success.\n"
+            
+            for i, test in enumerate(task.test_cases, 1):
+                inp = test.get('input', '')
+                exp = test.get('output', '').strip()
                 
-                for i, test_case in enumerate(task.test_cases, 1):
-                    test_input = test_case.get('input', '')
-                    expected_output = test_case.get('output', '').strip()
-                    
-                    start_time = time.time()
-                    try:
-                        run_result = subprocess.run([
-                            "docker", "exec", "-i", "compiler",
-                            "sh", "-c",
-                            f"ulimit -v {MEMORY_LIMIT_KB} && timeout {TIME_LIMIT_REAL}s /uploads/output"
-                        ],
-                         input=test_input,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE,
-                         text=True,
-                         timeout=TIME_LIMIT_REAL + 1)
-                        
-                        exec_time = time.time() - start_time
-                        total_time += exec_time
-                        
-                    except subprocess.TimeoutExpired:
-                        output += f"Test {i}: ✗ TIME LIMIT EXCEEDED\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Time limit: {TIME_LIMIT_USER}s\n\n"
-                        status = "timeout"
-                        error_message = "Time limit exceeded"
-                        break
-                    
-                    if run_result.returncode == 124:
-                        output += f"Test {i}: ✗ TIME LIMIT EXCEEDED\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Time limit: {TIME_LIMIT_USER}s\n\n"
-                        status = "timeout"
-                        error_message = "Time limit exceeded"
-                        break
-                    elif run_result.returncode == 137:
-                        output += f"Test {i}: ✗ MEMORY LIMIT EXCEEDED\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Memory limit: {task.memory_limit}MB\n\n"
-                        status = "runtime_error"
-                        error_message = "Memory limit exceeded"
-                        break
-                    elif run_result.returncode == 139:
-                        output += f"Test {i}: ✗ RUNTIME ERROR (Segmentation Fault)\n"
-                        output += f"  Input: {test_input or '(empty)'}\n\n"
-                        status = "runtime_error"
-                        error_message = "Segmentation fault"
-                        break
-                    elif run_result.returncode != 0:
-                        output += f"Test {i}: ✗ RUNTIME ERROR\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Exit code: {run_result.returncode}\n"
-                        if run_result.stderr:
-                            output += f"  Error: {run_result.stderr[:200]}\n"
-                        output += "\n"
-                        status = "runtime_error"
-                        error_message = run_result.stderr or f"Exit code: {run_result.returncode}"
-                        break
-                    
-                    if exec_time > TIME_LIMIT_USER:
-                        output += f"Test {i}: ✗ TIME LIMIT EXCEEDED\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Time: {exec_time:.3f}s (limit: {TIME_LIMIT_USER}s)\n\n"
-                        status = "timeout"
-                        error_message = "Time limit exceeded"
-                        break
-                    
-                    actual_output = run_result.stdout.strip()
-                    
-                    if actual_output == expected_output:
-                        output += f"Test {i}: ✓ PASSED\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Expected: {expected_output}\n"
-                        output += f"  Got: {actual_output}\n"
-                        output += f"  Time: {exec_time:.3f}s\n\n"
-                        passed_tests += 1
-                    else:
-                        output += f"Test {i}: ✗ WRONG ANSWER\n"
-                        output += f"  Input: {test_input or '(empty)'}\n"
-                        output += f"  Expected: {expected_output}\n"
-                        output += f"  Got: {actual_output}\n"
-                        output += f"  Time: {exec_time:.3f}s\n\n"
+                mem_kb = MEMORY_LIMIT_MB * 1024
+                run_cmd_str = f"ulimit -v {mem_kb}; timeout {TIME_LIMIT}s ./{filename_exe}"
                 
-                output += "="*70 + "\n"
-                output += f"Result: {passed_tests}/{total_tests} tests passed\n"
-                output += f"Total Time: {total_time:.3f}s\n"
+                t_start = time.time()
+                run_res = subprocess.run(
+                    ["docker", "exec", "-i", container_id, "sh", "-c", run_cmd_str],
+                    input=inp, capture_output=True, text=True, timeout=TIME_LIMIT + 2
+                )
+                duration = time.time() - t_start
                 
-                if status not in ["timeout", "runtime_error", "compilation_error"]:
-                    status = "accepted" if passed_tests == total_tests else "wrong answer"
-            else:
-                try:
-                    run_result = subprocess.run([
-                        "docker", "exec", "compiler",
-                        "sh", "-c",
-                        f"ulimit -v {MEMORY_LIMIT_KB} && timeout {TIME_LIMIT_REAL}s /uploads/output"
-                    ],
-                     stdout=subprocess.PIPE,
-                     stderr=subprocess.PIPE,
-                     text=True,
-                     timeout=TIME_LIMIT_REAL + 1)
-                    
-                    output += "\nProgram output:\n" + run_result.stdout
-                    if run_result.stderr:
-                        output += "\nErrors:\n" + run_result.stderr
-                    status = "completed" if run_result.returncode == 0 else "runtime_error"
-                    
-                except subprocess.TimeoutExpired:
-                    output += "\n⚠ Time limit exceeded"
+                actual = run_res.stdout.strip()
+                exit_code = run_res.returncode
+                
+                verdict = "OK"
+                if exit_code == 124:
+                    verdict = "TL"
                     status = "timeout"
+                    error_message_db = "Time Limit Exceeded"
+                elif exit_code == 139:
+                    verdict = "RE (SegFault)"
+                    status = "runtime_error"
+                    error_message_db = "Segmentation Fault"
+                elif exit_code != 0:
+                    verdict = f"RE ({exit_code})"
+                    status = "runtime_error"
+                    error_message_db = f"Runtime Error {exit_code}"
+                elif actual != exp:
+                    verdict = "WA"
+                    if status == "pending":
+                        status = "wrong_answer"
+                        error_message_db = "Wrong Answer"
+                else:
+                    passed_tests += 1
+                
+                output_log += f"Test {i}: {verdict} ({duration:.3f}s)\n"
+                if verdict != "OK" and verdict != "WA":
+                     output_log += f" Error info: {run_res.stderr}\n"
+                if verdict == "WA":
+                     output_log += f" Expected: {exp}\n Got: {actual}\n"
 
-    except subprocess.TimeoutExpired:
-        output = "Error: Compilation timed out"
-        status = "compilation_error"
-        error_message = "Compilation timeout"
+            if status == "pending":
+                status = "accepted"
+
     except Exception as e:
-        output = f"Error: {str(e)}"
-        status = "runtime_error"
-        error_message = str(e)
+        status = "system_error"
+        output_log += f"\nSystem Error: {str(e)}"
+        error_message_db = "System Error"
+        print(f"ERROR: {e}")
 
-    try:
-        user_obj = User.query.filter_by(username=current_user).first()
-        submission = Submission(
-            user_id=user_obj.user_id,
-            task_id=task_id,
-            code=code_content,
-            status=status,
-            passed_tests=passed_tests,
-            total_tests=total_tests,
-            error_message=error_message
-        )
-        db.session.add(submission)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving submission: {e}")
+    finally:
+        if os.path.exists(internal_file_path):
+            try: os.remove(internal_file_path)
+            except: pass
+        if container_id:
+            subprocess.run(["docker", "rm", "-f", container_id], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    return render_template('task_detail.html',
-                          title=task.task_name,
-                          user=current_user,
-                          menu=logged_user_menu(),
-                          task=task,
-                         output=output)
+    submission = Submission(
+        user_id=current_user.user_id, 
+        task_id=task_id,
+        code=code_content, 
+        status=status,
+        passed_tests=passed_tests,
+        total_tests=total_tests,
+        error_message=error_message_db
+    )
+    db.session.add(submission)
+    db.session.commit()
+
+    return render_template('task_detail.html', 
+                           title=task.task_name,
+                           menu=logged_user_menu(),
+                           task=task, 
+                           output=output_log)

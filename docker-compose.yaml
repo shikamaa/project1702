@@ -10,7 +10,6 @@ services:
       - "3432:5432"
     volumes:
       - 1702data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -30,21 +29,13 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:admin1702@db:5432/1702school
+      HOST_PROJECT_PATH: ${PROJECT_PATH} 
     volumes:
       - ./uploads:/uploads
       - /var/run/docker.sock:/var/run/docker.sock 
     networks:
       - app-network
 
-  compiler:
-    container_name: compiler
-    image: gcc:latest
-    command: tail -f /dev/null
-    volumes:
-      - ./uploads:/uploads
-    networks:
-      - app-network
-      
 volumes:
   1702data:
 

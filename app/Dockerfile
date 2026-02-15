@@ -1,13 +1,26 @@
-FROM python:3.12-slim
+
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+
+RUN sed -i 's/deb.debian.org/mirror.yandex.ru/g' /etc/apt/sources.list.d/debian.sources
 
 RUN apt-get update && \
-    apt-get install -y docker.io
+    apt-get install -y --no-install-recommends \
+    docker.io \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m venv /opt/venv
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 COPY requirements.txt .
-RUN . /opt/venv/bin/activate && pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD . /opt/venv/bin/activate && exec python app.py
+CMD ["python", "app.py"]

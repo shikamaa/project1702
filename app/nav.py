@@ -1,47 +1,42 @@
 from flask import session
-from models import User, UserType
+from models import User, STUDENT, TEACHER, ADMIN
+from flask_login import current_user
+from decorators import role_required
+
+TEACHER_MENU = (
+            {"name": "Tasks", "url": "routes.tasks"},
+            {"name": "My Submissions", "url": "routes.user_submissions"},
+            {"name": "Add Task", "url": "teacher_bp.add_task"}, 
+            {"name": "Settings", "url": "routes.settings"},           
+            {"name": "Logout", "url": "routes.logout"}
+)
+
+ADMIN_MENU = (
+    {"name": "Tasks", "url": "routes.tasks"},
+    {"name": "My Submissions", "url": "routes.user_submissions"},
+    {"name": "Accept Tasks", "url": "admin_bp.admin_tasks"},
+    {"name": "Add Task", "url": "teacher_bp.add_task"},
+    {"name": "Users", "url": "admin_bp.admin_users"},
+    {"name": "Settings", "url": "routes.settings"},
+    {"name": "Logout", "url": "routes.logout"}
+)
 
 def unlogged_user_menu():
-    return [
-        {"name": "Login", "url": "routes_bp.login_page"},
-        {"name": "Sign Up", "url": "routes_bp.signup_page"}
-    ]
-
+    return (
+        {"name": "Login", "url": "routes.login_page"},
+        {"name": "Sign Up", "url": "routes.signup_page"}
+    )
 def logged_user_menu():
-    if 'user_in_session' not in session:
-        return []
-
-    user = User.query.filter_by(
-        username=session['user_in_session']
-    ).first()
-
-    if not user:
-        return []
-
-    base_menu = [
-        {"name": "Tasks", "url": "routes_bp.tasks"},
-        {"name": "My Submissions", "url": "routes_bp.user_submissions"},
-        {"name": "Settings", "url": "routes_bp.settings"},
-        {"name": "Logout", "url": "routes_bp.logout"}
-    ]
-
-    role = user.user_role.value
-
-    if role == "teacher":
-        base_menu.insert(1, {
-            "name": "View Submissions",
-            "url": "teacher_bp.ret_submissions"
-        })
-
-    if role == "admin":
-        return [
-            {"name": "Tasks", "url": "routes_bp.tasks"},
-            {"name": "My Submissions", "url": "routes_bp.user_submissions"},
-            {"name": "Settings", "url": "routes_bp.settings"},
-            {"name": "Users", "url": "admin_bp.admin_users"},
-            #{"name": "Dashboard", "url": "routes_bp.admin_dashboard"},
-            #{"name": "Tasks Management", "url": "routes_bp.admin_tasks"},
-            {"name": "Logout", "url": "routes_bp.logout"}
-        ]
-
-    return base_menu
+    if current_user.user_role == STUDENT:
+        menu = (
+            {"name": "Tasks", "url": "routes.tasks"},
+            {"name": "My Submissions", "url": "routes.user_submissions"},
+            {"name": "Settings", "url": "routes.settings"},
+            {"name": "Logout", "url": "routes.logout"}
+        )
+    elif current_user.user_role == TEACHER:
+        menu = TEACHER_MENU
+    
+    elif current_user.user_role == ADMIN:
+        menu = ADMIN_MENU
+    return menu

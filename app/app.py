@@ -1,27 +1,35 @@
 from flask import Flask
 from os import getenv
 from werkzeug.security import generate_password_hash
+from dotenv import load_dotenv
+from flask_login import LoginManager
+from decorators import * 
+
+app = Flask(__name__)
+app.secret_key = '1702school'
+app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL', 'postgresql://postgres:admin1702@db/1702school')
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'routes_bp.login_page'
+login_manager.login_message = 'Please, log in for access'
 
 from database1702 import db
-from routes import routes_bp, teacher_bp, admin_bp
+from routes import routes, teacher_bp, admin_bp
 
-def create_app():
-    app = Flask(__name__)
-    app.secret_key = '1702school'
-    app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL', 'postgresql://postgres:admin1702@db/1702school')
-
-    db.init_app(app)
-
-    app.register_blueprint(routes_bp)
-    app.register_blueprint(teacher_bp)
-    app.register_blueprint(admin_bp)
-    return app
-
-app = create_app()
-
+import models
 with app.app_context():
-    import models
+    db.init_app(app)
     db.create_all()
+
+@login_manager.user_loader
+def load_user(user_id):
+    return models.User.query.get(int(user_id))
+
+app.register_blueprint(routes)
+app.register_blueprint(teacher_bp)
+app.register_blueprint(admin_bp)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
