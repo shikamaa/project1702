@@ -6,6 +6,7 @@ from decorators import role_required
 TEACHER_MENU = (
             {"name": "Tasks", "url": "routes.tasks"},
             {"name": "My Submissions", "url": "routes.user_submissions"},
+            {"name": "All Submissions", "url": "teacher_bp.all_submissions"},
             {"name": "Add Task", "url": "teacher_bp.add_task"}, 
             {"name": "Settings", "url": "routes.settings"},           
             {"name": "Logout", "url": "routes.logout"}
@@ -14,6 +15,7 @@ TEACHER_MENU = (
 ADMIN_MENU = (
     {"name": "Tasks", "url": "routes.tasks"},
     {"name": "My Submissions", "url": "routes.user_submissions"},
+    {"name": "All Submissions", "url": "teacher_bp.all_submissions"},
     {"name": "Accept Tasks", "url": "admin_bp.admin_tasks"},
     {"name": "Add Task", "url": "teacher_bp.add_task"},
     {"name": "Users", "url": "admin_bp.admin_users"},

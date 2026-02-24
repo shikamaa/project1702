@@ -66,3 +66,14 @@ class Submission(db.Model):
     
     def __repr__(self):
         return f'<Submission {self.submission_id}>'
+    
+class SubmissionReview(db.Model):
+    __tablename__ = 'submission_review'
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    submission_id = db.Column(db.BigInteger, db.ForeignKey('submission.submission_id'), nullable=False)
+    teacher_id = db.Column(db.BigInteger, db.ForeignKey('user_table.user_id'), nullable=False)
+    reviewed_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    comment = db.Column(db.Text)
+
+    submission = db.relationship('Submission', backref='reviews')
+    teacher = db.relationship('User', foreign_keys=[teacher_id])

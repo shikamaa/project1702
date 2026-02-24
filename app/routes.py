@@ -4,34 +4,111 @@ import subprocess
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from nav import logged_user_menu, unlogged_user_menu
-from models import User, Submission, Task, STUDENT, ADMIN, TEACHER, UserType
+from models import User, Submission, Task, SubmissionReview, STUDENT, ADMIN, TEACHER, UserType
 from database1702 import db
 import time
 from flask_login import login_required, logout_user, current_user, login_user
 from decorators import admin_required, teacher_required
 import uuid
+import json
+
 
 routes = Blueprint('routes', __name__, template_folder ='../template')
 teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/teacher', template_folder='../templates')
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin',template_folder='../templates')
 
 
+
+@routes.route('/submission/<int:submission_id>/review', methods=['POST'])
+@teacher_required
+def review_submission(submission_id):
+    submission = Submission.query.get_or_404(submission_id)
+    
+    submission.status = request.form.get('status')
+    submission.comment = request.form.get('comment')
+    review = SubmissionReview(
+    submission_id=submission_id,
+    teacher_id=current_user.user_id,
+    comment=request.form.get('comment')
+    )
+    db.session.add(review)
+    db.session.commit()
+    flash('Review saved.')
+    return redirect(url_for('routes.submission_detail', submission_id=submission_id))
+
+
+
 @teacher_bp.route('/student_submissions')
 @teacher_required
-def return_submissions():
-    submissions = Submission.query \
+def all_submissions():
+    all_submissions = Submission.query \
         .join(User) \
         .filter(User.user_role == STUDENT) \
         .order_by(Submission.submitted_at.desc()) \
         .all()
     
-    return render_template('all_submissions.html', 
-                           submissions=submissions)
+    return render_template('all_submissions.html',title="Student submissions",data = all_submissions, menu=logged_user_menu())
 
-@teacher_bp.route('/add_task')
+
+@teacher_bp.route('/add_task', methods=['GET', 'POST'])
 @teacher_required
 def add_task():
-    return render_template('add_task.html', menu=logged_user_menu())
+    if request.method == 'POST':
+        try:
+            task_name = request.form.get('task_name')
+            task_description = request.form.get('task_description')
+            
+            mem_raw = request.form.get('memory_limit')
+            time_raw = request.form.get('time_limit')
+            
+            if not mem_raw or not time_raw:
+                flash('Limits of time and memory required!', 'error')
+                return redirect(url_for('teacher_bp.add_task'))
+
+            memory_limit = int(mem_raw)
+            time_limit = int(time_raw)
+
+            try:
+                test_cases = json.loads(request.form.get('test_cases'))
+            except (ValueError, TypeError):
+                flash('JSON Error in open tests', 'error')
+                return redirect(url_for('teacher_bp.add_task'))
+
+            hidden_raw = request.form.get('hidden_test_cases')
+            hidden_test_cases = None
+            if hidden_raw and hidden_raw.strip():
+                try:
+                    hidden_test_cases = json.loads(hidden_raw)
+                except (ValueError, TypeError):
+                    flash('JSON Error in hidden tests', 'error')
+                    return redirect(url_for('teacher_bp.add_task'))
+
+            is_active = True if current_user.user_role == ADMIN else False
+
+            new_task = Task(
+                task_name=task_name,
+                task_description=task_description,
+                test_cases=test_cases,
+                hidden_test_cases=hidden_test_cases,
+                memory_limit=memory_limit,
+                time_limit=time_limit,
+                status=is_active
+            )
+
+            db.session.add(new_task)
+            db.session.commit()
+            
+            flash('Task created successfully!', 'success')
+            return redirect(url_for('routes.tasks'))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f'Data error: {str(e)}', 'error')
+        except Exception as e:
+            db.session.rollback()
+            print(f"Database error: {e}")
+            flash('Database error', 'error')
+
+    return render_template('teacher/add_task.html', menu=logged_user_menu())
 
 @admin_bp.route('/approve_task/<int:task_id>', methods=['POST'])
 @admin_required
