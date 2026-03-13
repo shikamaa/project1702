@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <ul>
+    {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+    {% endfor %}
+    </ul>
+
+
+    <div style="margin: 20px; padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #856404;">⚠️ Danger Zone</h3>
+        <form method="POST" action="{{ url_for('admin_bp.demote_all') }}" onsubmit="return confirm('Are you sure you want to demote ALL users to STUDENT? This cannot be undone!');">
+            <button type="submit" style="background-color: #dc3545;">⬇️ Demote ALL to Students</button>
+        </form>
+    </div>
+    
+    <div class="tasks-list">
+        {% for u in users %}
+            <div class="task-card">
+                <h3>{{ u.username }}</h3>
+                <p><strong>Name:</strong> {{ u.first_name }} {{ u.last_name }}</p>
+                <p><strong>Current role:</strong> {{ u.user_role.value }}</p>
+                
+                {% if u.username != user %}
+                    <form method="post" action="{{ url_for('admin_bp.change_user_role', user_id=u.user_id) }}">
+                        <label for="role_{{ u.user_id }}">Change role:</label>
+                        <select name="role" id="role_{{ u.user_id }}">
+                            {% for role in ['STUDENT', 'TEACHER', 'ADMIN'] %}
+                                <option value="{{ role }}" {% if u.user_role.name == role %}selected{% endif %}>
+                                    {{ role }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">Update</button>
+                    </form>
+                {% else %}
+                    <p><em>You cannot change your own role</em></p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 from flask import session
 from models import User, STUDENT, TEACHER, ADMIN
 from flask_login import current_user
-from decorators import role_required
+from login import role_required
 
 TEACHER_MENU = (
             {"name": "Tasks", "url": "routes.tasks"},

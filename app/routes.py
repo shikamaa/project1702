@@ -1,40 +1,60 @@
-from flask import render_template, request, redirect, url_for, flash, Blueprint, current_app
+from flask import render_template, request, redirect, url_for, flash, Blueprint
 import os
 import subprocess
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from nav import logged_user_menu, unlogged_user_menu
 from models import User, Submission, Task, SubmissionReview, STUDENT, ADMIN, TEACHER, UserType
-from database1702 import db
+from db import db
 import time
 from flask_login import login_required, logout_user, current_user, login_user
-from decorators import admin_required, teacher_required
+from login import admin_required, teacher_required
 import uuid
 import json
-
 
 routes = Blueprint('routes', __name__, template_folder ='../template')
 teacher_bp = Blueprint('teacher_bp', __name__, url_prefix='/teacher', template_folder='../templates')
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin',template_folder='../templates')
 
 
+@admin_bp.route('/tasks/delete/<int:task_id>', methods=['POST'])
+@admin_required
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    
+    Submission.query.filter_by(task_id=task_id).delete()
+    
+    db.session.delete(task)
+    db.session.commit()
+    flash(f'Task "{task.task_name}" deleted!')
+    return redirect(url_for('routes.tasks')) 
 
 @routes.route('/submission/<int:submission_id>/review', methods=['POST'])
 @teacher_required
 def review_submission(submission_id):
     submission = Submission.query.get_or_404(submission_id)
-    
     submission.status = request.form.get('status')
     submission.comment = request.form.get('comment')
-    review = SubmissionReview(
-    submission_id=submission_id,
-    teacher_id=current_user.user_id,
-    comment=request.form.get('comment')
-    )
-    db.session.add(review)
+
+    review = SubmissionReview.query.filter_by(
+        submission_id=submission_id,
+        teacher_id=current_user.user_id
+    ).first()
+
+    if review:
+        review.comment = request.form.get('comment')
+        review.reviewed_at = db.func.now()
+    else:
+        review = SubmissionReview(
+            submission_id=submission_id,
+            teacher_id=current_user.user_id,
+            comment=request.form.get('comment')
+        )
+        db.session.add(review)
+
     db.session.commit()
     flash('Review saved.')
-    return redirect(url_for('routes.submission_detail', submission_id=submission_id))
+    return redirect(url_for('teacher_bp.all_submissions'))
 
 
 
@@ -180,7 +200,7 @@ def change_user_role(user_id):
 
 
 @routes.route('/user_submissions')
-@teacher_required
+@login_required
 def user_submissions():
     submissions = Submission.query.filter_by(
         user_id=current_user.user_id
@@ -203,11 +223,18 @@ def submission_detail(submission_id):
         flash("Access denied")
         return redirect(url_for('routes.tasks'))
     
+    reviews = SubmissionReview.query\
+        .filter_by(submission_id=submission_id)\
+        .order_by(SubmissionReview.reviewed_at.desc())\
+        .all()
+    
     return render_template('submission_detail.html',
                          title=f'Submission #{submission_id}',
                          menu=logged_user_menu(),
-                         submission=submission)
-
+                         submission=submission,
+                         reviews=reviews)
+    
+    
 @routes.route('/')
 def main_page():
     if current_user.is_authenticated:
@@ -316,6 +343,7 @@ def settings():
 @login_required
 def tasks():
     all_available_tasks = Task.query.filter_by(status='t').all()
+
     return render_template('tasks.html', 
                          title='Main page',
                          menu=logged_user_menu(), 
@@ -325,6 +353,7 @@ def tasks():
 @login_required
 def task_detail(task_id):
     task = Task.query.get_or_404(task_id)
+    role = User.query.get_or_404(current_user.user_id)
     return render_template('task_detail.html',
                           title=task.task_name,
                           menu=logged_user_menu(),

@@ -1,2 +1,11 @@
-.env
+bin
+include
+lib64
+lib
 uploads
+.env
+init.sql
+init1.sql
+pyvenv.cfg
+./app/.env
+

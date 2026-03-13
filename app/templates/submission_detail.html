@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ title }}</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .detail-container { background: white; padding: 20px; margin: 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .info-section { background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .info-section h3 { margin-top: 0; color: hsl(216, 71%, 57%); }
+        .info-row { display: flex; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: bold; width: 150px; color: #555; }
+        .info-value { flex: 1; }
+        
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-block; }
+        .status-okay { background-color: #d4edda; color: #155724; }
+        .status-not-okay { background-color: #f8d7da; color: #721c24; }
+        .status-pending { background-color: #e2e3e5; color: #383d41; }
+
+        .code-section { margin-top: 20px; }
+        .code-section h3 { color: hsl(216, 71%, 57%); margin-bottom: 10px; }
+        .code-container { background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; }
+        .code-container pre { margin: 0; background: transparent; border: none; padding: 0; }
+        .code-container code { font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; }
+        
+        .back-button { display: inline-block; margin-bottom: 20px; padding: 10px 20px; background-color: hsl(216, 71%, 57%); color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease; }
+        .back-button:hover { background-color: hsl(216, 71%, 47%); text-decoration: none; }
+
+        .review-entry { padding: 10px; border-bottom: 1px solid #eee; }
+        .review-entry:last-child { border-bottom: none; }
+        .review-meta { font-size: 13px; color: #888; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <ul>
+    {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+    {% endfor %}
+    </ul>
+
+    <div class="detail-container">
+        <a href="/" class="back-button">← Back</a>
+
+        <div class="info-section">
+            <h3>Submission Information</h3>
+            <div class="info-row">
+                <div class="info-label">Submission ID:</div>
+                <div class="info-value">{{ submission.submission_id }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Student:</div>
+                <div class="info-value">{{ submission.user.username }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Task:</div>
+                <div class="info-value">
+                    <a href="{{ url_for('routes.task_detail', task_id=submission.task.task_id) }}">
+                        {{ submission.task.task_name }}
+                    </a>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Status:</div>
+                <div class="info-value">
+                    {% if submission.status in ['accepted', 'okay'] %}
+                        <span class="status-badge status-okay">Accepted</span>
+                    {% elif submission.status == 'pending' %}
+                        <span class="status-badge status-pending">Pending</span>
+                    {% elif submission.status == 'wrong_answer' %}
+                        <span class="status-badge status-not-okay">Wrong Answer</span>
+                    {% elif submission.status == 'compilation_error' %}
+                        <span class="status-badge status-not-okay">Compile Error</span>
+                    {% elif submission.status == 'runtime_error' %}
+                        <span class="status-badge status-not-okay">Runtime Error</span>
+                    {% elif submission.status == 'timeout' %}
+                        <span class="status-badge status-not-okay">Time Limit</span>
+                    {% else %}
+                        <span class="status-badge status-pending">{{ submission.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Tests Passed:</div>
+                <div class="info-value">{{ submission.passed_tests }}/{{ submission.total_tests }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Submitted At:</div>
+                <div class="info-value">{{ submission.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            </div>
+        </div>
+
+        <div class="code-section">
+            <h3>Submitted Code</h3>
+            <div class="code-container">
+                <pre><code>{{ submission.code }}</code></pre>
+            </div>
+        </div>
+
+        {% if reviews %}
+        <div class="info-section" style="margin-top: 20px;">
+            <h3>Teacher Comments</h3>
+            {% for review in reviews %}
+            <div class="review-entry">
+                <div class="review-meta">
+                    {{ review.teacher.username }} — {{ review.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                </div>
+                <div>{{ review.comment or '(no comment)' }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if current_user.user_role.value in ['TEACHER', 'ADMIN'] %}
+        <div class="info-section">
+            <h3>Review Submission</h3>
+            <form method="POST" action="{{ url_for('routes.review_submission', submission_id=submission.submission_id) }}">
+                <div class="info-row">
+                    <div class="info-label">Change Status:</div>
+                    <div class="info-value">
+                        <select name="status">
+                            <option value="accepted" {% if submission.status == 'accepted' %}selected{% endif %}>Accepted</option>
+                            <option value="wrong_answer" {% if submission.status == 'wrong_answer' %}selected{% endif %}>Wrong Answer</option>
+                            <option value="pending" {% if submission.status == 'pending' %}selected{% endif %}>Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Comment:</div>
+                    <div class="info-value">
+                        <textarea name="comment" rows="3" style="width: 100%;">{{ submission.comment or '' }}</textarea>
+                    </div>
+                </div>
+                <button type="submit" style="margin-top: 10px; padding: 8px 16px; background: hsl(216, 71%, 57%); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Save Review
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>

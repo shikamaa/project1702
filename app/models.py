@@ -1,5 +1,5 @@
 from datetime import datetime
-from database1702 import db
+from db import db
 from sqlalchemy import Enum
 import enum
 from flask_login import UserMixin
@@ -44,6 +44,10 @@ class Task(db.Model):
     time_limit = db.Column(db.Integer, nullable=False, default=2)
     status = db.Column(db.Boolean, default=False)
     
+    submissions = db.relationship('Submission', backref='task_ref', 
+                                  cascade='all, delete-orphan',
+                                  foreign_keys='Submission.task_id')
+    
     def __repr__(self):
         return f'<Task {self.task_id}: {self.task_name}>'
 
@@ -62,7 +66,7 @@ class Submission(db.Model):
     submitted_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     
     user = db.relationship('User', foreign_keys=[user_id])
-    task = db.relationship('Task', foreign_keys=[task_id])
+    #task = db.relationship('Task', foreign_keys=[task_id])
     
     def __repr__(self):
         return f'<Submission {self.submission_id}>'

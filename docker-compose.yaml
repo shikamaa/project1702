@@ -4,12 +4,16 @@ services:
     image: postgres:15-alpine
     env_file:
       - .env
+    environment:
+      POSTGRES_PASSWORD: ${PASSWORD}
+      POSTGRES_USER: ${USR}
+      POSTGRES_DB: ${DB}
     ports:
       - "3432:5432"
     volumes:
       - 1702data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${USR}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -18,7 +22,7 @@ services:
       - app-network
 
   web:
-    container_name: wsgiapp
+    container_name: appl
     build: ./app
     ports:
       - "5000:5000"

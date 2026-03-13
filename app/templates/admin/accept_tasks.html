@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ title }}</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <ul>
+    {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+    {% endfor %}
+    </ul>
+    
+    
+    <h3>Tasks Pending Approval:</h3>
+    
+    {% if tasks_to_accept %}
+    <div class="tasks-list">
+        {% for task in tasks_to_accept %}
+        <div class="task-card">
+            <h3>{{ task.task_name }}</h3>
+            <p>{{ task.task_description[:150] }}{% if task.task_description|length > 150 %}...{% endif %}</p>
+            
+            <div style="margin-top: 15px;">
+                <form action="{{ url_for('admin_bp.approve_task', task_id=task.task_id) }}" method="POST" style="display: inline; margin: 0; padding: 0; border: none; background: none;">
+                    <button type="submit" style="background-color: #28a745; margin-right: 10px;">✓ Approve</button>
+                </form>
+                
+                <form action="{{ url_for('admin_bp.reject_task', task_id=task.task_id) }}" method="POST" style="display: inline; margin: 0; padding: 0; border: none; background: none;">
+                    <button type="submit" style="background-color: #dc3545;">✗ Reject</button>
+                </form>
+                
+                <a href="{{ url_for('routes.task_detail', task_id=task.task_id) }}" style="margin-left: 10px;">View Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="padding: 20px;">No tasks pending approval</p>
+    {% endif %}
+</body>
+</html>

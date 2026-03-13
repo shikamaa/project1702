@@ -3,11 +3,10 @@ from os import getenv
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from flask_login import LoginManager
-from decorators import * 
+from login import * 
 import secrets
 
 load_dotenv()
-
 
 app = Flask(__name__)
 app.secret_key = getenv('SECRET_KEY')
@@ -19,7 +18,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'routes_bp.login_page'
 login_manager.login_message = 'Please, log in for access'
 
-from database1702 import db
+from db import db
 from routes import routes, teacher_bp, admin_bp
 
 import models
