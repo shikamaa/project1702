@@ -2,7 +2,8 @@ bin
 include
 lib64
 lib
-uploads
+uploads/*
+!uploads/.gitkeep
 .env
 init.sql
 init1.sql

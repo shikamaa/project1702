@@ -1,27 +1,58 @@
-/* =============================================
-   BASE
-   IBM Plex Sans — чистая, читаемая, техническая.
-   Лучше Arial для UI с данными.
-   ============================================= */
+@font-face {
+    font-family: 'Roboto';
+    src: url('fonts/Roboto-VariableFont_wdth,wght.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Roboto';
+    src: url('fonts/Roboto-Italic-VariableFont_wdth,wght.ttf') format('truetype');
+    font-style: italic;
+}
+
+.user-greeting {
+    padding: 14px 0;
+    background-color: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-greeting h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1e293b;
+    padding-left: 0;
+}
+.center {
+  display: flex;
+  justify-content: left;
+  align-items: left;
+  padding-left: 25px;
+}
+
+.center h1 {
+    font-size: 40px;
+    color: rgb(211, 90, 90);
+
+}
+
 body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
     background-color: #f4f6f9;
     color: #1a1a2e;
 }
 
-/* =============================================
-   NAVIGATION
-   Оставляем твой оригинальный стиль навбара —
-   он уже хорошо выглядит, только шрифт обновим.
-   ============================================= */
 ul {
     list-style-type: none;
     margin: 0;
-    padding: 0;
+    padding-bottom: 4px;
+    padding-left: 0;
     overflow: hidden;
-    background-color: hsl(216, 71%, 57%);
+    background-color: #0f172a;
 }
 ul li {
     float: left;
@@ -30,23 +61,37 @@ ul li a {
     display: block;
     color: white;
     text-align: center;
-    padding: 14px 16px;
+    padding: 14px 14px;
     text-decoration: none;
     font-weight: 500;
     font-size: 14px;
     letter-spacing: 0.3px;
     transition: background-color 0.2s ease;
+
+    border-bottom: 2px solid transparent;
 }
 ul li a:hover {
-    background-color: hsl(216, 71%, 47%);
+    background-color: hsl(216, 4%, 22%);
 }
 
-/* =============================================
-   PAGE HEADER
-   Заголовок страницы + счётчик рядом.
-   flex + align-items позволяет выровнять их
-   по базовой линии без лишних костылей.
-   ============================================= */
+ul li a.active {
+    color: white;
+    border-bottom: 2px solid #4f8ef7;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .page-header {
     display: flex;
     align-items: baseline;
@@ -60,33 +105,22 @@ ul li a:hover {
     color: #1a1a2e;
 }
 
-/* Маленький серый счётчик рядом с заголовком —
-   даёт контекст без лишнего элемента на странице */
 .submissions-count {
     font-size: 13px;
     color: #888;
     font-weight: 400;
 }
 
-/* =============================================
-   TABLE WRAPPER
-   Обёртка нужна для горизонтального скролла
-   на маленьких экранах без поломки лейаута.
-   ============================================= */
+
 .table-wrapper {
     margin: 12px 24px 24px;
     background: #fff;
     border-radius: 10px;
     border: 1px solid #e2e8f0;
-    overflow: hidden; /* чтобы border-radius работал с таблицей */
+    overflow: hidden; 
     overflow-x: auto;
 }
 
-/* =============================================
-   SUBMISSIONS TABLE
-   border-collapse убирает двойные границы.
-   width: 100% растягивает на весь wrapper.
-   ============================================= */
 .submissions-table {
     width: 100%;
     border-collapse: collapse;
@@ -106,8 +140,7 @@ ul li a:hover {
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: #64748b;
-    /* uppercase + letter-spacing — стандарт для заголовков таблиц,
-       визуально отделяет их от данных */
+
 }
 
 .submissions-table td {
@@ -117,46 +150,33 @@ ul li a:hover {
     color: #334155;
 }
 
-/* Hover строки — даёт понять что строка кликабельна/интерактивна */
+
 .submissions-table tbody tr:hover {
     background-color: #f8fafc;
 }
 
-/* Убираем border у последней строки — выглядит чище */
+
 .submissions-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-/* =============================================
-   MONO & DATE
-   Моноширинный шрифт для ID, дат, счётчиков —
-   цифры выровнены по ширине, легче читать.
-   ============================================= */
+
 .mono {
     font-family: 'Courier New', monospace;
     font-size: 13px;
 }
 .date {
     color: #64748b;
-    white-space: nowrap; /* дата не переносится */
+    white-space: nowrap;
 }
 
-/* =============================================
-   STUDENT NAME
-   Лёгкое выделение имени студента — чуть темнее
-   и жирнее чем обычный текст, но не кричащее.
-   ============================================= */
+
 .student-name {
     font-weight: 500;
     color: #1e293b;
 }
 
-/* =============================================
-   STATUS BADGES
-   Каждый статус — свой цвет.
-   Pill-форма (border-radius: 20px) — современный
-   стандарт для бейджей в таблицах.
-   ============================================= */
+
 .badge {
     display: inline-block;
     padding: 3px 10px;
@@ -167,36 +187,29 @@ ul li a:hover {
     letter-spacing: 0.2px;
 }
 
-/* Зелёный — успех */
+
 .badge-ok {
     background-color: #dcfce7;
     color: #166534;
 }
 
-/* Красный — ошибка (wrong answer, runtime error) */
+
 .badge-fail {
     background-color: #fee2e2;
     color: #991b1b;
 }
 
-/* Жёлтый — предупреждение (compile error, timeout) —
-   не провал, но требует внимания */
 .badge-warn {
     background-color: #fef9c3;
     color: #854d0e;
 }
 
-/* Серый — нейтральный pending */
 .badge-pending {
     background-color: #f1f5f9;
     color: #475569;
 }
 
-/* =============================================
-   PROGRESS BAR
-   Визуальный индикатор прохождения тестов.
-   Flex + gap выравнивают текст и бар в ряд.
-   ============================================= */
+
 .tests-cell {
     display: flex;
     align-items: center;
@@ -216,15 +229,10 @@ ul li a:hover {
     height: 100%;
     background-color: hsl(216, 71%, 57%);
     border-radius: 99px;
-    /* Минимальная ширина чтобы бар был виден даже при 1 тесте из 100 */
     min-width: 4px;
 }
 
-/* =============================================
-   VIEW LINK
-   Стрелка "View →" вместо кнопки — легче,
-   не перегружает таблицу визуально.
-   ============================================= */
+
 .view-link {
     color: hsl(216, 71%, 57%);
     font-weight: 500;
@@ -237,10 +245,6 @@ ul li a:hover {
     text-decoration: underline;
 }
 
-/* =============================================
-   EMPTY STATE
-   Центрированный плейсхолдер когда нет данных.
-   ============================================= */
 .empty-state {
     padding: 48px 24px;
     text-align: center;
@@ -248,25 +252,6 @@ ul li a:hover {
     font-size: 15px;
 }
 
-/* =============================================
-   USER GREETING (оригинальный класс)
-   ============================================= */
-.user-greeting {
-    padding: 20px;
-    margin: 0;
-}
-.user-greeting h2 {
-    margin: 0;
-    padding: 0;
-}
-
-/* body > * убираем — он конфликтовал с table-wrapper,
-   добавляя padding к таблицам изнутри */
-
-/* =============================================
-   TASKS LIST & CARDS
-   Без изменений от оригинала.
-   ============================================= */
 .tasks-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -299,9 +284,7 @@ ul li a:hover {
     margin-bottom: 0;
 }
 
-/* =============================================
-   TASK CONTAINER
-   ============================================= */
+
 .task-container {
     background: #fff;
     padding: 20px;
@@ -310,9 +293,6 @@ ul li a:hover {
     margin: 20px;
 }
 
-/* =============================================
-   TEST CASES
-   ============================================= */
 .test-cases {
     background: #f5f5f5;
     padding: 15px;
@@ -343,9 +323,7 @@ ul li a:hover {
     font-family: 'Courier New', monospace;
 }
 
-/* =============================================
-   FORMS
-   ============================================= */
+
 form {
     background: #f9f9f9;
     padding: 20px;
@@ -372,12 +350,10 @@ form button {
     transition: background-color 0.3s ease;
 }
 form button:hover {
-    background-color: hsl(216, 71%, 47%);
+    background-color: black;
+    color:white;
 }
 
-/* =============================================
-   PRE / CODE
-   ============================================= */
 pre {
     background: #f5f5f5;
     padding: 15px;
@@ -385,16 +361,21 @@ pre {
     border: 1px solid #ddd;
     overflow-x: auto;
     margin: 20px;
-    font-family: 'Courier New', monospace;
+    font-family: 'Roboto';
 }
 
-/* =============================================
-   LINKS
-   ============================================= */
 a {
-    color: hsl(216, 71%, 57%);
+    color: black;
     text-decoration: none;
+
 }
 a:hover {
     text-decoration: underline;
 }
+
+.delete-task button {
+    background-color: red;
+    color: white;
+}
+
+

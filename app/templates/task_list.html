@@ -11,24 +11,29 @@
         <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
     {% endfor %}
     </ul>
-    
-    
+
+    <div class="user-greeting">
+        <div class="avatar">{{ usr[0] }}</div>
+        <h3>Hello, {{ usr }}. Good luck!</h3>
+    </div>
+
     {% if tasks %}
-    <div class="tasks-list">
+     <div class="tasks-list">
         {% for task in tasks %}
         <div class="task-card">
             <h3>
-                <a href="{{ url_for('routes.task_detail', task_id=task.task_id) }}">
+                <a href="{{ url_for('simple_routes.show_task_detailed', task_id=task.task_id) }}" class="active">
                     {{ task.task_name }}
                 </a>
-
             </h3>
             <p>{{ task.task_description[:110] }}{% if task.task_description %}...{% endif %}</p>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <p>No tasks available</p>
-    {% endif %}
+    <div class="center">
+        <h1>No 'Tasks' found</h1>
+    </div>
+    {% endif %} 
 </body>
 </html>

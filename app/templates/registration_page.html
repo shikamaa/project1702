@@ -11,12 +11,12 @@
         <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
         {% endfor %}
     </ul>
-<form method="POST" action="{{ url_for('routes.signup_page') }}">
+<form method="POST" action="{{ url_for('simple_routes.signup_page') }}">
     <label for="first_name">Name</label>
     <input type="text" id="first_name" name="first_name" required><br><br>
 
     <label for="last_name">Last name</label>
-    <input type="text" id="last_name" name="last_name" required><br><br>
+    <input type="text" id="last_name" name="last_name"><br><br>
 
     <label for="username">Username</label>
     <input type="text" id="username" name="username" required><br><br>

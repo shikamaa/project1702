@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,6 @@
     </ul>
 
     <div class="page-header">
-        <!-- Показываем количество сабмитов сразу — удобно для учителя -->
         {% if data %}
             <span class="submissions-count">{{ data|length }} submissions</span>
         {% endif %}
@@ -40,7 +39,6 @@
                         <td><span class="student-name">{{ s.user.username }}</span></td>
                         <td>{{ s.task.task_name }}</td>
                         <td>
-                            <!-- Бейджи статусов — сразу видно что к чему без чтения текста -->
                             {% if s.status in ['accepted', 'okay'] %}
                                 <span class="badge badge-ok">Accepted</span>
                             {% elif s.status == 'pending' %}
@@ -74,4 +72,6 @@
  
     {% endif %}
 </body>
-</html>
+</html> -->
+
+TEST

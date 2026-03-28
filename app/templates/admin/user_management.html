@@ -1,0 +1,24 @@
+<html>
+<head>
+
+</head>
+
+<body>
+    <ul>
+        {% for m in menu %}
+        <li>
+            <a href = "{{ url_for(m.url) }} "> {{ m.name }} </a>
+        </li>
+        {% endfor %}
+
+        <table>
+
+            
+
+
+        </table>
+
+    </ul>
+
+</body>
+</html>

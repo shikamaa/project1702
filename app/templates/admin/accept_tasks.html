@@ -12,9 +12,9 @@
     {% endfor %}
     </ul>
     
-    
-    <h3>Tasks Pending Approval:</h3>
-    
+    <div class="user-greeting">
+        <h3>Tasks Pending Approval:</h3>
+    </div>
     {% if tasks_to_accept %}
     <div class="tasks-list">
         {% for task in tasks_to_accept %}
@@ -31,7 +31,7 @@
                     <button type="submit" style="background-color: #dc3545;">✗ Reject</button>
                 </form>
                 
-                <a href="{{ url_for('routes.task_detail', task_id=task.task_id) }}" style="margin-left: 10px;">View Details</a>
+                <a href="{{ url_for('simple_routes.show_task_detail', task_id=task.task_id) }}" style="margin-left: 10px;">View Details</a>
             </div>
         </div>
         {% endfor %}

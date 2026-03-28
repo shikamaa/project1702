@@ -1,6 +1,6 @@
 services:
   db:
-    container_name: dbase
+    container_name: 1702db
     image: postgres:15-alpine
     env_file:
       - .env
@@ -22,7 +22,7 @@ services:
       - app-network
 
   web:
-    container_name: appl
+    container_name: 1702app
     build: ./app
     ports:
       - "5000:5000"
@@ -30,17 +30,16 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - .env
-    environment:
-      - HOST_PROJECT_PATH=${PROJECT_PATH}
+      - ./.env
     volumes:
-      - ./uploads:/uploads
       - /var/run/docker.sock:/var/run/docker.sock 
+      - ./uploads:/uploads
     networks:
       - app-network
 
 volumes:
   1702data:
+  upload_data:
 
 networks:
   app-network:

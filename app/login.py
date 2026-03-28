@@ -8,11 +8,11 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             flash('Please log in to access this page')
-            return redirect(url_for('routes.login_page'))
+            return redirect(url_for('simple_routes.login_page'))
         
         if current_user.user_role != ADMIN:
             flash('Access denied. Admin rights required.')
-            return redirect(url_for('routes.tasks'))
+            return redirect(url_for('simple_routes.show_tasks'))
         
         return f(*args, **kwargs)
     
@@ -24,29 +24,27 @@ def teacher_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             flash('Please log in to access this page')
-            return redirect(url_for('routes.login_page'))
+            return redirect(url_for('simple_routes.login_page'))
         
         if current_user.user_role not in (TEACHER, ADMIN):
             flash('Access denied. Teacher or Admin rights required.')
-            return redirect(url_for('routes.tasks'))
+            return redirect(url_for('simple_routes.show_tasks'))
         
         return f(*args, **kwargs)
     
     return decorated_function
 
 def role_required(*roles):
-
     def wrapper(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 flash('Please log in to access this page')
-                return redirect(url_for('routes.login_page'))
+                return redirect(url_for('simple_routes.login_page'))
             
-
-            if current_user.user_role not in roles:
-                flash('Access denied.')
-                return redirect(url_for('routes.tasks'))
+            # if current_user.user_role not in roles:
+            #     flash('Access denied.')
+            #     return redirect(url_for('simple_routes.show_tasks'))
             
             return f(*args, **kwargs)
         
