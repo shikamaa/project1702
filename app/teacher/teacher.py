@@ -8,7 +8,7 @@ from login import teacher_required
 from models import User, Task, Submission,SubmissionReview, STUDENT, ADMIN, STUDENT
 from flask_login import current_user
 
-teacher_urls = Blueprint('teacher_urls',  __name__, template_folder='../templates')
+teacher_urls = Blueprint('teacher_urls',  __name__, template_folder='../teacher/templates/')
 
 @teacher_urls.route('/student_submissions')
 @teacher_required
@@ -22,9 +22,9 @@ def all_submissions():
     return render_template('submissions.html',title="Student submissions",data = all_submissions, menu=logged_user_menu())
 
 
-@teacher_urls.route('/add_task', methods=['GET', 'POST'])
+@teacher_urls.route('/propose_task', methods=['GET', 'POST'])
 @teacher_required
-def add_task():
+def propose_task():
     if request.method == 'POST':
         try:
             task_name = request.form.get('task_name')
@@ -35,7 +35,7 @@ def add_task():
             
             if not mem_raw or not time_raw:
                 flash('Limits of time and memory required!', 'error')
-                return redirect(url_for('teacher_urls.add_task'))
+                return redirect(url_for('teacher_urls.propose_task'))
 
             memory_limit = int(mem_raw)
             time_limit = int(time_raw)
@@ -44,7 +44,7 @@ def add_task():
                 test_cases = json.loads(request.form.get('test_cases'))
             except (ValueError, TypeError):
                 flash('JSON Error in open tests', 'error')
-                return redirect(url_for('teacher_urls.add_task'))
+                return redirect(url_for('teacher_urls.propose_task'))
 
             hidden_raw = request.form.get('hidden_test_cases')
             hidden_test_cases = None
@@ -53,7 +53,7 @@ def add_task():
                     hidden_test_cases = json.loads(hidden_raw)
                 except (ValueError, TypeError):
                     flash('JSON Error in hidden tests', 'error')
-                    return redirect(url_for('teacher_urls.add_task'))
+                    return redirect(url_for('teacher_urls.propose_task'))
 
             is_active = True if current_user.user_role == ADMIN else False
 
@@ -80,7 +80,7 @@ def add_task():
             print(f"Database error: {e}")
             flash('Database error', 'error')
 
-    return render_template('../admin/accept_tasks.html', menu=logged_user_menu())
+    return render_template('propose_task.html', menu=logged_user_menu())
 
 @teacher_urls.route('/submission/<int:submission_id>/review', methods=['POST'])
 @teacher_required

@@ -7,7 +7,7 @@ TEACHER_MENU = (
             {"name": "Tasks", "url": "simple_routes.show_tasks"},
             {"name": "My Submissions", "url": "simple_routes.user_submissions"},
             {"name": "All Submissions", "url": "teacher_urls.all_submissions"},
-            {"name": "Add Task", "url": "teacher_urls.add_task"}, 
+            {"name": "Add Task", "url": "teacher_urls.propose_task"}, 
             {"name": "Settings", "url": "simple_routes.settings"},           
             {"name": "Logout", "url": "simple_routes.logout"}
 )
@@ -16,8 +16,8 @@ ADMIN_MENU = (
     {"name": "Tasks", "url": "simple_routes.show_tasks"},
     {"name": "My Submissions", "url": "simple_routes.user_submissions"},
     {"name": "All Submissions", "url": "teacher_urls.all_submissions"},
-    # {"name": "Accept Tasks", "url": "admin_bp.admin_tasks"},
-    {"name": "Add Task", "url": "teacher_urls.add_task"},
+    #{"name": "Accept Tasks", "url": "admin_bp.admin_tasks"},
+    {"name": "Commit Task", "url": "teacher_urls.propose_task"},
     {"name": "Users", "url": "admin_routes.get_users"},
     {"name": "Settings", "url": "simple_routes.settings"},
     {"name": "Logout", "url": "simple_routes.logout"}
