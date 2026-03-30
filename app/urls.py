@@ -139,6 +139,8 @@ def compile_file():
         code_content = file.read().decode('utf-8')
     except UnicodeDecodeError:
         flash("UnicodeDecodeError")
+        
+        #CE
         return redirect(url_for('simple_routes.show_task_detailed'))
 
     file.seek(0)
@@ -154,71 +156,32 @@ def compile_file():
     passed = 0
     final_verdict = 'OK'
 
-    for each_test in open_test_cases:
-        inp = each_test["input"]
-        expected_output = each_test["output"]
-        
-        try:
-            result = subprocess.run(
-                [
+    #Check if compiled
+    is_compiled = subprocess.run(
+               [
                     'docker', 'run', '--rm',
                     f'--memory={memory_limit}m',
                     '--network=none',
                     '-v', f'{host_filepath}:/box/solution.c',
                     'judge',
                     'sh', '-c',
-                    'gcc /box/solution.c -o /box/solution && /usr/bin/time -v /box/solution'
+                    'gcc /box/solution.c -o /box/solution'
                 ],
-                input=inp.encode(),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=time_limit + 5
-            )
-        except subprocess.TimeoutExpired:
-            final_verdict = 'TLE'
-            break
-
-        stdout = result.stdout.decode().strip()
-        stderr = result.stderr.decode()
-        
-        if result.returncode != 0 and 'Maximum resident set size' not in stderr:
-            verdict = 'CE'
-            final_verdict = 'CE'
-            results.append({
-                'verdict': verdict,
-                'stdout': '',
-                'stderr': stderr,
-                'memory': 0
-            })
-            break  
-        
-        elapsed, memory = parse_time_output(stderr)
-
-        if elapsed > time_limit:
-            verdict = 'TLE'
-            final_verdict = 'TLE'
-        elif memory > memory_limit * 1024:
-            verdict = 'MLE'
-            final_verdict = 'MLE'
-        elif stdout == expected_output.strip():
-            verdict = 'OK'
-            passed += 1
-        else:
-            verdict = 'WA'
-            final_verdict = 'WA'
-
-        results.append({
-            'verdict': verdict,
-            'stdout': stdout,
-            'stderr': stderr,
-            'memory': memory
-        })
-
-    hidden_passed = 0
+               stdout = subprocess.PIPE,
+               stderr = subprocess.PIPE,
+               text=True
+    )
     
-    if hidden_test_cases:
 
-        for each_test in hidden_test_cases:
+    if is_compiled.returncode != 0:
+        final_verdict = 'CE'
+        flash("COMPILE ERROR")
+        print("Thats CE")
+        return redirect(url_for('simple_routes.show_tasks'))
+        #CE
+        #return redirect(url_for(f'simple_routes.show_task_detailed({current_task})'))
+    else:
+        for each_test in open_test_cases:
             inp = each_test["input"]
             expected_output = each_test["output"]
             
@@ -244,20 +207,85 @@ def compile_file():
 
             stdout = result.stdout.decode().strip()
             stderr = result.stderr.decode()
-
+            print(stdout,"\n",stderr)
+            
+            if result.returncode != 0 and 'Maximum resident set size' not in stderr:
+                verdict = 'CE'
+                final_verdict = 'CE'
+                results.append({
+                    'verdict': verdict,
+                    'stdout': '',
+                    'stderr': stderr,
+                    'memory': 0
+                })
+                break  
+            
             elapsed, memory = parse_time_output(stderr)
 
             if elapsed > time_limit:
+                verdict = 'TLE'
                 final_verdict = 'TLE'
-                break
             elif memory > memory_limit * 1024:
+                verdict = 'MLE'
                 final_verdict = 'MLE'
-                break
             elif stdout == expected_output.strip():
-                hidden_passed += 1
+                verdict = 'OK'
+                passed += 1
             else:
+                verdict = 'WA'
                 final_verdict = 'WA'
-                break
+
+            results.append({
+                'verdict': verdict,
+                'stdout': stdout,
+                'stderr': stderr,
+                'memory': memory
+            })
+
+        hidden_passed = 0
+        
+        if hidden_test_cases:
+
+            for each_test in hidden_test_cases:
+                inp = each_test["input"]
+                expected_output = each_test["output"]
+                
+                try:
+                    result = subprocess.run(
+                        [
+                            'docker', 'run', '--rm',
+                            f'--memory={memory_limit}m',
+                            '--network=none',
+                            '-v', f'{host_filepath}:/box/solution.c',
+                            'judge',
+                            'sh', '-c',
+                            'gcc /box/solution.c -o /box/solution && /usr/bin/time -v /box/solution'
+                        ],
+                        input=inp.encode(),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=time_limit + 5
+                    )
+                except subprocess.TimeoutExpired:
+                    final_verdict = 'TLE'
+                    break
+
+                stdout = result.stdout.decode().strip()
+                stderr = result.stderr.decode()
+
+                elapsed, memory = parse_time_output(stderr)
+
+                if elapsed > time_limit:
+                    final_verdict = 'TLE'
+                    break
+                elif memory > memory_limit * 1024:
+                    final_verdict = 'MLE'
+                    break
+                elif stdout == expected_output.strip():
+                    hidden_passed += 1
+                else:
+                    final_verdict = 'WA'
+                    break
 
     os.remove(filepath)
 

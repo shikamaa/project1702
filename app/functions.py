@@ -3,7 +3,7 @@ from sqlalchemy import select
 from db import db
 from flask_login import current_user
 from models import User
-
+from werkzeug.security import generate_password_hash, check_password_hash
 import re
 
 def change_username(new_username):
@@ -20,6 +20,18 @@ def change_username(new_username):
     else:
         flash('Username already exists')
     return redirect(url_for('simple_routes.settings'))
+
+def change_password(new_password, current_password):
+        if check_password_hash(current_user.password_hash, current_password):
+            current_user.password_hash = generate_password_hash(new_password)
+            flash('Password changed successfully!')
+            db.session.commit()
+            return redirect(url_for('simple_routes.settings'))
+        else:
+            flash('No match')
+            
+            
+
     
 def parse_time_output(stderr):
     time_match = re.search(r'Elapsed.*?: (\d+):(\d+)\.(\d+)', stderr)
@@ -37,3 +49,5 @@ def parse_time_output(stderr):
     memory = int(mem_match.group(1))
 
     return elapsed, memory
+
+

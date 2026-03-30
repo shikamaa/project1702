@@ -3,10 +3,12 @@ from flask_login import login_required, logout_user, current_user, login_user
 from sqlalchemy import select
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+
 from db import db
 from models import Task, User, STUDENT, Submission
 from navigation import logged_user_menu, unlogged_user_menu
-from functions import change_username
+from functions import change_username, change_password
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='../templates')
 
@@ -91,18 +93,9 @@ def login_page():
 def settings():   
     if request.method == 'POST':
         if 'new_password' in request.form:
-        #     current_password = request.form.get('password')
-        #     new_password = request.form.get('new_password')
-
-        #     if check_password_hash(current_user.password_hash, current_password):
-        #         current_user.password_hash = generate_password_hash(new_password)
-        #         db.session.commit()
-        #         flash('Password successfully changed. Please log in again.')
-        #         logout_user()
-        #         return redirect(url_for('simple_routes.login_page'))
-        #     else:
-        #         flash('Incorrect current password!')
-            pass
+            current_password = request.form.get('password')
+            new_password = request.form.get('new_password')
+            change_password(new_password, current_password)
         elif 'new_username' in request.form:
             new_username = request.form.get('new_username')
             change_username(new_username)
@@ -162,5 +155,4 @@ def user_submissions():
         title='My submissions',
         menu = logged_user_menu(),
         submissions = user_submissions
-        )
-    
+    )
