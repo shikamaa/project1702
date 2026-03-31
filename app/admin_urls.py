@@ -21,7 +21,7 @@ def delete_task(task_id):
 def get_users():
     all_users = db.session.execute(select(User)).scalars().all()
     if all_users != None:
-        print("Good")
+        print("USERS ARE EXIST")
         
         
         

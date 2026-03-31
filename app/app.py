@@ -29,7 +29,7 @@ from urls import teacher_bp, admin_bp, routes
 from simple_urls import simple_routes
 from admin_urls import admin_routes
 
-from teacher.teacher import teacher_urls
+from teacher_urls import teacher_urls
 
 @login_manager.user_loader
 def load_user(user_id):

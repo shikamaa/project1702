@@ -10,7 +10,7 @@ from models import Task, User, STUDENT, Submission
 from navigation import logged_user_menu, unlogged_user_menu
 from functions import change_username, change_password
 
-simple_routes = Blueprint('simple_routes', __name__, template_folder ='../templates')
+simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
 
 @simple_routes.route('/')
 def main_page():
@@ -35,8 +35,9 @@ def signup_page():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
+        existing_user = db.session.execute(select(User).where(User.username == username)).scalar_one_or_none()
+        if existing_user is not None:
+            print('ACCOUNT EXISTS')
             flash('User already exists')
             return render_template('registration_page.html', 
                                  title='Signup Page',
