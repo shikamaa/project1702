@@ -74,4 +74,23 @@
 </body>
 </html> -->
 
-TEST
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset = "UTF-8">
+    <title> {{ title }} </title>
+    <!-- <link ref="stylesheet" href="{{ url_for('static', filename='../app/templates/style.css') }}"> -->
+</head>
+
+<body>
+    <ul>
+        {% for m in menu %}
+            <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+        {% endfor %}
+    </ul>
+
+
+</body>
+
+
+</html>

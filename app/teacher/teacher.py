@@ -13,13 +13,26 @@ teacher_urls = Blueprint('teacher_urls',  __name__, template_folder='../teacher/
 @teacher_urls.route('/student_submissions')
 @teacher_required
 def all_submissions():
-    all_submissions = Submission.query \
-        .join(User) \
-        .filter(User.user_role == STUDENT) \
-        .order_by(Submission.submitted_at.desc()) \
-        .all()
+    # all_submissions = Submission.query \
+    #     .join(User) \
+    #     .filter(User.user_role == STUDENT) \
+    #     .order_by(Submission.submitted_at.desc()) \
+    #     .all()
+    query  = (
+        select(Submission).
+        join(User, User.user_role == STUDENT).
+        order_by(Submission.submitted_at.desc())
+        
+    )
+    all_submissions = db.session.execute(query).scalars().all()
     
-    return render_template('submissions.html',title="Student submissions",data = all_submissions, menu=logged_user_menu())
+    
+    return render_template(
+        'submissions.html',
+        title="Student submissions",
+        data = all_submissions, 
+        menu=logged_user_menu()
+        )
 
 
 @teacher_urls.route('/propose_task', methods=['GET', 'POST'])
