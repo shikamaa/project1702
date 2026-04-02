@@ -58,7 +58,7 @@
                         </td>
                         <td class="mono date">{{ s.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>
-                            <a href="{{ url_for('routes.submission_detail', submission_id=s.submission_id) }}" class="view-link">View →</a>
+                            <a href="{{ url_for('simple_routes.submission_detailed', submission_id=s.submission_id) }}" class="view-link">View →</a>
                         </td>
                     </tr>
                     {% endfor %}
