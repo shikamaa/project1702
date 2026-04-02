@@ -92,30 +92,6 @@ admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin',template_folder='
 #     return redirect(url_for('admin_bp.admin_users'))
 
 
-
-    
-@routes.route('/submission/<int:submission_id>')
-@login_required
-def submission_detail(submission_id):
-    submission = Submission.query.get_or_404(submission_id)
-    
-    if submission.user_id != current_user.user_id and \
-       current_user.user_role not in (TEACHER, ADMIN):
-        flash("Access denied")
-        return redirect(url_for('simple_routes.show_tasks'))
-    
-    reviews = SubmissionReview.query\
-        .filter_by(submission_id=submission_id)\
-        .order_by(SubmissionReview.reviewed_at.desc())\
-        .all()
-    
-    return render_template('submission_detail.html',
-                         title=f'Submission #{submission_id}',
-                         menu=logged_user_menu(),
-                         submission=submission,
-                         reviews=reviews)
-    
-
 load_dotenv(dotenv_path='/app/.env')
 
 @routes.route('/compile/', methods=['GET','POST'])
@@ -243,7 +219,6 @@ def compile_file():
             })
 
         hidden_passed = 0
-        
         if hidden_test_cases:
 
             for each_test in hidden_test_cases:
@@ -286,8 +261,6 @@ def compile_file():
                 else:
                     final_verdict = 'WA'
                     break
-
-    os.remove(filepath)
 
     submission = Submission(
         user_id=int(current_user.get_id()),

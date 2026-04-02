@@ -2,11 +2,9 @@ from flask import render_template, Blueprint, redirect, url_for, request, flash,
 from flask_login import login_required, logout_user, current_user, login_user
 from sqlalchemy import select
 from werkzeug.security import generate_password_hash, check_password_hash
-
-
-
+from datetime import timedelta
 from db import db
-from models import Task, User, STUDENT, Submission
+from models import Task, User, STUDENT, Submission, TEACHER, ADMIN, SubmissionReview
 from navigation import logged_user_menu, unlogged_user_menu
 from functions import change_username, change_password
 
@@ -77,9 +75,8 @@ def login_page():
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password_hash, password):
-            login_user(user, remember=True)
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('simple_routes.show_tasks'))
+            login_user(user, remember=True, duration=timedelta(minutes=30))
+            return redirect(url_for('simple_routes.show_tasks'))
         
         flash('Incorrect username or password')
 
@@ -157,3 +154,25 @@ def user_submissions():
         menu = logged_user_menu(),
         submissions = user_submissions
     )
+    
+@simple_routes.route('/submission/<int:submission_id>')
+@login_required
+def submission_detailed(submission_id):
+    submission = Submission.query.get_or_404(submission_id)
+    
+    if submission.user_id != current_user.user_id and \
+       current_user.user_role not in (TEACHER, ADMIN):
+        flash("Access denied")
+        return redirect(url_for('simple_routes.show_tasks'))
+    
+    reviews = SubmissionReview.query\
+        .filter_by(submission_id=submission_id)\
+        .order_by(SubmissionReview.reviewed_at.desc())\
+        .all()
+    
+    return render_template('submission_detailed.html',
+                         title=f'Submission #{submission_id}',
+                         menu=logged_user_menu(),
+                         submission=submission,
+                         reviews=reviews)
+    
