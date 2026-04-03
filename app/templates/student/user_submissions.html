@@ -18,57 +18,33 @@
         {% endif %}
     </div>
 
-    {% if submissions %}
-        <div class="table-wrapper">
-            <table class="submissions-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Task</th>
-                        <th>Status</th>
-                        <th>Tests Passed</th>
-                        <th>Submitted At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in submissions %}
-                    <tr>
-                        <td class="mono">{{ s.submission_id }}</td>
-                        <td>{{ s.task.task_name }}</td>
-                        <td>
-                            {% if s.status in ['accepted', 'okay'] %}
-                                <span class="badge badge-ok">Accepted</span>
-                            {% elif s.status == 'pending' %}
-                                <span class="badge badge-pending">Pending</span>
-                            {% elif s.status == 'wrong_answer' %}
-                                <span class="badge badge-fail">Wrong Answer</span>
-                            {% elif s.status == 'compilation_error' %}
-                                <span class="badge badge-warn">Compile Error</span>
-                            {% elif s.status == 'runtime_error' %}
-                                <span class="badge badge-fail">Runtime Error</span>
-                            {% elif s.status == 'timeout' %}
-                                <span class="badge badge-warn">Time Limit</span>
-                            {% else %}
-                                <span class="badge badge-pending">{{ s.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="mono">{{ s.passed_tests }}/{{ s.total_tests }}</span>
-                        </td>
-                        <td class="mono date">{{ s.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        <td>
-                            <a href="{{ url_for('simple_routes.submission_detailed', submission_id=s.submission_id) }}" class="view-link">View →</a>
-                        </td>
-                    </tr>
+
+    <div class = "submission_panel">
+        <table>
+            <thead>
+                <tr>
+                    {% for column in columns %}
+                    <th> {{ column }} </th>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="center">
-            <h1>No 'Submissions' found. Try solve some problems!</h1>
-        </div>      
-    {% endif %}
+                </tr>   
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                    <tr>
+                        <td> {{ submission.task.task_name }} </td>
+                        <td> {{ submission.status }} </td>
+                        <td> {{ submission.passed_tests }} / {{ submission.total_tests }}</td>
+                        <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M')}} </td>
+                    
+                {% endfor %}
+                        <td> link to details </td>
+                    </tr>
+            </tbody>
+
+        </table>
+
+    </div>
+
+
 </body>
 </html>

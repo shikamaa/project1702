@@ -1,6 +1,7 @@
 from flask import render_template, Blueprint, redirect, url_for, request, flash, abort
 from flask_login import login_required, logout_user, current_user, login_user
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload, load_only
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 from db import db
@@ -143,15 +144,21 @@ def show_task_detailed(task_id: int):
 @simple_routes.route('/user_submissions')
 @login_required
 def user_submissions():
+
     query = (
-        select(Submission).filter_by(user_id=current_user.user_id).order_by(Submission.submitted_at.desc())
-    )
-    user_submissions = db.session.execute(query).scalars().all()
+            select(Submission).where(Submission.user_id == current_user.user_id).
+            options(load_only(Submission.submission_id, Submission.status, Submission.submitted_at, Submission.passed_tests, Submission.total_tests),
+            joinedload(Submission.task).load_only(Task.task_name)).order_by(Submission.submitted_at.desc())
+            )
+    
+    user_submissions = (db.session.execute(query)).scalars().all()    
+
     
     return render_template(
         'user_submissions.html',
         title='My submissions',
         menu = logged_user_menu(),
+        columns = ['Task Name','Status','Tests','Submitted at', 'Details'],
         submissions = user_submissions
     )
     
