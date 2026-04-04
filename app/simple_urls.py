@@ -167,19 +167,10 @@ def user_submissions():
 def submission_detailed(submission_id):
     submission = Submission.query.get_or_404(submission_id)
     
-    if submission.user_id != current_user.user_id and \
-       current_user.user_role not in (TEACHER, ADMIN):
-        flash("Access denied")
-        return redirect(url_for('simple_routes.show_tasks'))
-    
-    reviews = SubmissionReview.query\
-        .filter_by(submission_id=submission_id)\
-        .order_by(SubmissionReview.reviewed_at.desc())\
-        .all()
     
     return render_template('submission_detailed.html',
                          title=f'Submission #{submission_id}',
                          menu=logged_user_menu(),
                          submission=submission,
-                         reviews=reviews)
+                         )
     
