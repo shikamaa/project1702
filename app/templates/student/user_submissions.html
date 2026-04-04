@@ -12,14 +12,8 @@
         {% endfor %}
     </ul>
 
-    <div class="page-header">
-        {% if submissions %}
-            <span class="submissions-count">{{ submissions|length }} submissions</span>
-        {% endif %}
-    </div>
 
-
-    <div class = "submission_panel">
+    <div class = "submission-panel">
         <table>
             <thead>
                 <tr>
@@ -34,11 +28,10 @@
                         <td> {{ submission.task.task_name }} </td>
                         <td> {{ submission.status }} </td>
                         <td> {{ submission.passed_tests }} / {{ submission.total_tests }}</td>
-                        <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M')}} </td>
-                    
-                {% endfor %}
-                        <td> link to details </td>
+                        <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }} </td>
+                        <td> <a href="{{ url_for('simple_routes.submission_detailed', submission_id=submission.submission_id) }}"> Go to details</a> </td>
                     </tr>
+                {% endfor %}
             </tbody>
 
         </table>

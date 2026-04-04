@@ -92,17 +92,16 @@ ul li a.active {
     font-weight: 500;
 }
 
-.page-header {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    padding: 24px 24px 8px;
+.submission-panel table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
 }
-.page-header h2 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-    color: #1a1a2e;
+
+.submission-panel td {
+    padding: 12px 16px;
+}
+.submission-panel table{
+    margin-left: 20px;
 }
 
 .submissions-count {
@@ -110,7 +109,6 @@ ul li a.active {
     color: #888;
     font-weight: 400;
 }
-
 
 .table-wrapper {
     margin: 12px 24px 24px;
@@ -120,46 +118,6 @@ ul li a.active {
     overflow: hidden; 
     overflow-x: auto;
 }
-
-.submissions-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-.submissions-table thead {
-    background-color: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.submissions-table th {
-    padding: 12px 16px;
-    text-align: left;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: #64748b;
-
-}
-
-.submissions-table td {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-    color: #334155;
-}
-
-
-.submissions-table tbody tr:hover {
-    background-color: #f8fafc;
-}
-
-
-.submissions-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
 
 .mono {
     font-family: 'Courier New', monospace;

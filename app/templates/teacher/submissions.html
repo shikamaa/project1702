@@ -1,85 +1,11 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <ul>
-        {% for m in menu %}
-            <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
-        {% endfor %}
-    </ul>
 
-    <div class="page-header">
-        {% if data %}
-            <span class="submissions-count">{{ data|length }} submissions</span>
-        {% endif %}
-    </div>
-
-    {% if data %}
-        <div class="table-wrapper">
-            <table class="submissions-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Student</th>
-                        <th>Task</th>
-                        <th>Status</th>
-                        <th>Tests Passed</th>
-                        <th>Submitted At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for s in data %}
-                    <tr>
-                        <td class="mono">{{ s.submission_id }}</td>
-                        <td><span class="student-name">{{ s.user.username }}</span></td>
-                        <td>{{ s.task.task_name }}</td>
-                        <td>
-                            {% if s.status in ['accepted', 'okay'] %}
-                                <span class="badge badge-ok">Accepted</span>
-                            {% elif s.status == 'pending' %}
-                                <span class="badge badge-pending">Pending</span>
-                            {% elif s.status == 'wrong_answer' %}
-                                <span class="badge badge-fail">Wrong Answer</span>
-                            {% elif s.status == 'compilation_error' %}
-                                <span class="badge badge-warn">Compile Error</span>
-                            {% elif s.status == 'runtime_error' %}
-                                <span class="badge badge-fail">Runtime Error</span>
-                            {% elif s.status == 'timeout' %}
-                                <span class="badge badge-warn">Time Limit</span>
-                            {% else %}
-                                <span class="badge badge-pending">{{ s.status }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <span class="mono">{{ s.passed_tests }}/{{ s.total_tests }}</span>
-                        </td>
-                        
-                        <td class="mono date">{{ s.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        <td>
-                            <a href="{{ url_for('routes.submission_detail', submission_id=s.submission_id) }}" class="view-link">View →</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
- 
-    {% endif %}
-</body>
-</html> -->
 
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset = "UTF-8">
     <title> {{ title }} </title>
-    <!-- <link ref="stylesheet" href="{{ url_for('static', filename='../app/templates/style.css') }}"> -->
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css')}}">
 </head>
 
 <body>
@@ -89,8 +15,5 @@
         {% endfor %}
     </ul>
 
-
 </body>
-
-
 </html>
