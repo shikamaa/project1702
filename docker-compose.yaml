@@ -21,6 +21,44 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: 1702redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "$${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    env_file:
+      - .env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-defaultpassword}
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    sysctls:
+      - net.core.somaxconn=65535
+
   web:
     container_name: 1702app
     build: ./app
@@ -28,6 +66,8 @@ services:
       - "5000:5000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     env_file:
       - ./.env
@@ -39,8 +79,26 @@ services:
     networks:
       - app-network
 
+  worker:
+    container_name: 1702worker
+    build: ./app
+    command: celery -A tasks worker --loglevel=info
+    env_file: ./.env
+    environment:
+      - HOST_UPLOADS=${PWD}/uploads/
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./uploads:/uploads
+    depends_on:
+      - redis
+      - db
+    networks:
+      - app-network
+
 volumes:
   1702data:
+  redis-data:
 
 networks:
   app-network:
+    driver: bridge

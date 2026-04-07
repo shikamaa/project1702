@@ -5,8 +5,6 @@ lib
 uploads/*
 !uploads/.gitkeep
 .env
-init.sql
-init1.sql
 pyvenv.cfg
 ./app/.env
-
+redis.conf
