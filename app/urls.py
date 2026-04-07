@@ -13,6 +13,7 @@ import uuid
 import json
 from dotenv import load_dotenv
 from sqlalchemy import select
+import shutil
 
 from functions import parse_time_output
 load_dotenv()
@@ -106,135 +107,70 @@ def compile_file():
         flash('Not found')
         return redirect(url_for('simple_routes.show_task_detailed'))
     
-    filename = f'{uuid.uuid4().hex}.c'
+    submission_id = uuid.uuid4().hex
     
-    filepath = os.getenv('FILEPATH') + filename
-    host_filepath = os.getenv('HOST_UPLOADS') + filename
+    local_dir = os.path.join(os.getenv('FILEPATH'), submission_id) 
+    host_dir = os.path.join(os.getenv('HOST_UPLOADS'), submission_id)
+    
+    os.makedirs(local_dir, exist_ok=True)
+    filepath = os.path.join(local_dir, 'solution.c')
 
     try:
-        code_content = file.read().decode('utf-8')
-    except UnicodeDecodeError:
-        flash("UnicodeDecodeError")
+        try:
+            code_content = file.read().decode('utf-8')
+        except UnicodeDecodeError:
+            flash("UnicodeDecodeError")
+            return redirect(url_for('simple_routes.show_task_detailed'))
+
+        file.seek(0)
+        file.save(filepath)
         
-        #CE
-        return redirect(url_for('simple_routes.show_task_detailed'))
-
-    file.seek(0)
-    file.save(filepath)
-    
-    time_limit = task.time_limit
-    memory_limit = task.memory_limit
-    
-    open_test_cases = task.test_cases
-    hidden_test_cases = task.hidden_test_cases
-    
-    results = []
-    passed = 0
-    final_verdict = 'OK'
-
-    #Check if compiled
-    is_compiled = subprocess.run(
-               [
-                    'docker', 'run', '--rm',
-                    f'--memory={memory_limit}m',
-                    '--network=none',
-                    '-v', f'{host_filepath}:/box/solution.c',
-                    'judge',
-                    'sh', '-c',
-                    'gcc /box/solution.c -o /box/solution'
-                ],
-               stdout = subprocess.PIPE,
-               stderr = subprocess.PIPE,
-               text=True
-    )
-    
-
-    if is_compiled.returncode != 0:
-        final_verdict = 'CE'
-        flash("COMPILE ERROR")
-        print("Thats CE")
-        return redirect(url_for('simple_routes.show_tasks'))
-        #CE
-        #return redirect(url_for(f'simple_routes.show_task_detailed({current_task})'))
-    else:
-        for each_test in open_test_cases:
-            inp = each_test["input"]
-            expected_output = each_test["output"]
-            
-            try:
-                result = subprocess.run(
-                    [
-                        'docker', 'run', '--rm',
-                        f'--memory={memory_limit}m',
-                        '--network=none',
-                        '-v', f'{host_filepath}:/box/solution.c',
-                        'judge',
-                        'sh', '-c',
-                        'gcc /box/solution.c -o /box/solution && /usr/bin/time -v /box/solution'
-                    ],
-                    input=inp.encode(),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=time_limit + 5
-                )
-            except subprocess.TimeoutExpired:
-                final_verdict = 'TLE'
-                break
-
-            stdout = result.stdout.decode().strip()
-            stderr = result.stderr.decode()
-            print(stdout,"\n",stderr)
-            
-            if result.returncode != 0 and 'Maximum resident set size' not in stderr:
-                verdict = 'CE'
-                final_verdict = 'CE'
-                results.append({
-                    'verdict': verdict,
-                    'stdout': '',
-                    'stderr': stderr,
-                    'memory': 0
-                })
-                break  
-            
-            elapsed, memory = parse_time_output(stderr)
-
-            if elapsed > time_limit:
-                verdict = 'TLE'
-                final_verdict = 'TLE'
-            elif memory > memory_limit * 1024:
-                verdict = 'MLE'
-                final_verdict = 'MLE'
-            elif stdout == expected_output.strip():
-                verdict = 'OK'
-                passed += 1
-            else:
-                verdict = 'WA'
-                final_verdict = 'WA'
-
-            results.append({
-                'verdict': verdict,
-                'stdout': stdout,
-                'stderr': stderr,
-                'memory': memory
-            })
-
+        time_limit = task.time_limit
+        memory_limit = task.memory_limit
+        
+        open_test_cases = task.test_cases or []
+        hidden_test_cases = task.hidden_test_cases or []
+        
+        results = []
+        passed = 0
         hidden_passed = 0
-        if hidden_test_cases:
+        final_verdict = 'OK'
 
-            for each_test in hidden_test_cases:
+        is_compiled = subprocess.run(
+            [
+                'docker', 'run', '--rm',
+                '--network=none',
+                '-v', f'{host_dir}:/box',
+                'sh', '-c',
+                'gcc /box/solution.c -o /box/solution'
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if is_compiled.returncode != 0:
+            final_verdict = 'CE'
+            flash("COMPILE ERROR")
+            print("Thats CE:\n", is_compiled.stderr)
+            return redirect(url_for('simple_routes.show_tasks'))
+        else:
+            for each_test in open_test_cases:
                 inp = each_test["input"]
                 expected_output = each_test["output"]
                 
                 try:
                     result = subprocess.run(
                         [
-                            'docker', 'run', '--rm',
+                            'docker', 'run', '--rm', '-i',
                             f'--memory={memory_limit}m',
+                            '--cpus=0.5',
+                            '--pids-limit=64',
                             '--network=none',
-                            '-v', f'{host_filepath}:/box/solution.c',
+                            '-v', f'{host_dir}:/box',
                             'judge',
                             'sh', '-c',
-                            'gcc /box/solution.c -o /box/solution && /usr/bin/time -v /box/solution'
+                            '/usr/bin/time -v /box/solution'
                         ],
                         input=inp.encode(),
                         stdout=subprocess.PIPE,
@@ -247,33 +183,108 @@ def compile_file():
 
                 stdout = result.stdout.decode().strip()
                 stderr = result.stderr.decode()
-
+                print(stdout, "\n", stderr)
+                
+                if result.returncode != 0 and 'Maximum resident set size' not in stderr:
+                    verdict = 'RE'
+                    final_verdict = 'RE'
+                    results.append({
+                        'verdict': verdict,
+                        'stdout': '',
+                        'stderr': stderr,
+                        'memory': 0
+                    })
+                    break  
+                
                 elapsed, memory = parse_time_output(stderr)
 
                 if elapsed > time_limit:
+                    verdict = 'TLE'
                     final_verdict = 'TLE'
-                    break
                 elif memory > memory_limit * 1024:
+                    verdict = 'MLE'
                     final_verdict = 'MLE'
-                    break
                 elif stdout == expected_output.strip():
-                    hidden_passed += 1
+                    verdict = 'OK'
+                    passed += 1
                 else:
+                    verdict = 'WA'
                     final_verdict = 'WA'
+
+                results.append({
+                    'verdict': verdict,
+                    'stdout': stdout,
+                    'stderr': stderr,
+                    'memory': memory
+                })
+                
+                if verdict != 'OK':
                     break
 
-    submission = Submission(
-        user_id=int(current_user.get_id()),
-        task_id=current_task,
-        code=code_content,
-        status=final_verdict,
-        passed_tests=passed + hidden_passed,
-        total_tests=len(open_test_cases) + hidden_passed,
-    )
-    db.session.add(submission)
-    db.session.commit()
-    
-    return render_template(
+            if final_verdict == 'OK' and hidden_test_cases:
+                for each_test in hidden_test_cases:
+                    inp = each_test["input"]
+                    expected_output = each_test["output"]
+                    
+                    try:
+                        result = subprocess.run(
+                            [
+                                'docker', 'run', '--rm', '-i',
+                                f'--memory={memory_limit}m',
+                                '--cpus=0.5',
+                                '--pids-limit=64',
+                                '--network=none',
+                                '-v', f'{host_dir}:/box',
+                                'judge',
+                                'sh', '-c',
+                                '/usr/bin/time -v /box/solution'
+                            ],
+                            input=inp.encode(),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            timeout=time_limit + 5
+                        )
+                    except subprocess.TimeoutExpired:
+                        final_verdict = 'TLE'
+                        break
+
+                    stdout = result.stdout.decode().strip()
+                    stderr = result.stderr.decode()
+                    
+                    if result.returncode != 0 and 'Maximum resident set size' not in stderr:
+                        final_verdict = 'RE'
+                        break
+
+                    elapsed, memory = parse_time_output(stderr)
+
+                    if elapsed > time_limit:
+                        final_verdict = 'TLE'
+                        break
+                    elif memory > memory_limit * 1024:
+                        final_verdict = 'MLE'
+                        break
+                    elif stdout == expected_output.strip():
+                        hidden_passed += 1
+                    else:
+                        final_verdict = 'WA'
+                        break
+
+        total_open = len(open_test_cases)
+        total_hidden = len(hidden_test_cases)
+        total_tests_count = total_open + total_hidden
+
+        submission = Submission(
+            user_id=int(current_user.get_id()),
+            task_id=current_task,
+            code=code_content,
+            status=final_verdict,
+            passed_tests=passed + hidden_passed,
+            total_tests=total_tests_count,
+        )
+        db.session.add(submission)
+        db.session.commit()
+        
+        return render_template(
             'task_detailed.html',
             title=f'Task {current_task}',
             menu=logged_user_menu(),
@@ -281,5 +292,9 @@ def compile_file():
             output=results,
             final_verdict=final_verdict,
             passed=passed + hidden_passed,
-            total=len(open_test_cases) + hidden_passed,
+            total=total_tests_count,
         )
+
+    finally:
+        if os.path.exists(local_dir):
+            shutil.rmtree(local_dir, ignore_errors=True)

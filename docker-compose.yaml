@@ -31,6 +31,8 @@ services:
         condition: service_healthy
     env_file:
       - ./.env
+    environment:
+      - HOST_UPLOADS=${PWD}/uploads/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock 
       - ./uploads:/uploads
@@ -39,7 +41,6 @@ services:
 
 volumes:
   1702data:
-  upload_data:
 
 networks:
   app-network:
