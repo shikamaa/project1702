@@ -22,7 +22,7 @@
         {% for task in tasks %}
         <div class="task-card">
             <h3>
-                <a href="{{ url_for('simple_routes.show_task_detailed', task_id=task.task_id) }}" class="active">
+                <a href="{{ url_for('simple_routes.new_task_det', task_id=task.task_id) }}" class="active">
                     {{ task.task_name }}
                 </a>
             </h3>

@@ -5,6 +5,7 @@ from flask_login import current_user
 from models import User
 from werkzeug.security import generate_password_hash, check_password_hash
 import re
+from models import Submission
 
 def change_username(new_username):
     if current_user.username == new_username:
@@ -30,9 +31,6 @@ def change_password(new_password, current_password):
         else:
             flash('No match')
             
-            
-
-    
 def parse_time_output(stderr):
     time_match = re.search(r'Elapsed.*?: (\d+):(\d+)\.(\d+)', stderr)
     mem_match = re.search(r'Maximum resident set size.*?: (\d+)', stderr)
@@ -50,4 +48,17 @@ def parse_time_output(stderr):
 
     return elapsed, memory
 
+
+def make_submission(us_id,t_id,code,verdict, passed_tests, total_tests):    
+    new_submission = Submission(
+        user_id=us_id,
+        task_id=t_id,
+        code=code,
+        status=verdict,
+        passed_tests=passed_tests,
+        total_tests=total_tests,
+    )
+    db.session.add(new_submission)
+    db.session.commit()
+    return new_submission
 

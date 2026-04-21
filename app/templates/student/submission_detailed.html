@@ -12,6 +12,17 @@
     {% endfor %}
     </ul>
 
-    OK
+    {% if submission %}
+
+        {{ submission.code }}
+        <br>
+        {{ submission.status }}
+        <br>
+        {{ submission.submitted_at}}
+        <br>
+        {{ submission.passed_tests}}/{{submission.total_tests}}
+    {% else %}
+        NO
+    {% endif %} 
 </body>
 </html>
