@@ -122,13 +122,21 @@ def new_task_det(task_id):
         submission_directory = uuid.uuid4().hex
         directories = pathlib.Path.cwd()
         parent_directories = directories.parent
+        print(os.environ.get("HOST_UPLOADS"))
+        upload_base = os.environ.get("HOST_UPLOADS", "/uploads")
 
-        upload_directory = os.path.join(parent_directories, str(submission_directory))
+        container_uploads = "/uploads"
+        upload_directory = os.path.join(container_uploads, submission_directory)
+
+        host_uploads = os.environ.get("HOST_UPLOADS", "/uploads")
+        host_upload_directory = os.path.join(host_uploads, submission_directory)
 
         try:
             os.makedirs(upload_directory,exist_ok=True)
+            os.chmod(upload_directory, 0o777)
         except OSError as OSerr:
-            print(OSerr)   
+            print(OSerr)
+
         file.save(os.path.join(upload_directory, "solution.c"))
         for test_number, test_case in enumerate(tests, start=1):
             input_path = pathlib.Path(upload_directory) / f"{test_number}.in"      
@@ -137,19 +145,22 @@ def new_task_det(task_id):
             answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"      
             answer_path.write_text(str(test_case["output"]))
 
-        shutil.copy("s.sh", upload_directory)    
+        script_path = pathlib.Path(__file__).parent / "s.sh"
+        shutil.copy(script_path, upload_directory)  
 
         print(upload_directory)
         print(os.listdir(upload_directory))
 
         docker_tester = subprocess.run([
             "docker", "run", "--rm",
-            "-v", f"{upload_directory}:/box",
+            "-v", f"{os.environ.get('HOST_UPLOADS')}:/uploads",
             "--network=none",
             "judge",
-            "sh", "/box/s.sh", "/box/solution.c",
-        ],text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-
+            "sh", f"/uploads/{submission_directory}/s.sh", f"/uploads/{submission_directory}/solution.c",
+        ], text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        print(docker_tester.stdout)
+        print(docker_tester.stderr)
+        print(docker_tester.returncode)
         for test_number, test_case in enumerate(tests, start=1):
             out_path = pathlib.Path(upload_directory) / f"{test_number}.out"
             ans_path = pathlib.Path(upload_directory) / f"{test_number}.ans"

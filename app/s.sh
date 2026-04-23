@@ -1,14 +1,15 @@
 #!/bin/sh
 FILENAME=$1
+DIR=$(dirname $FILENAME)
 
-gcc $FILENAME -o /box/binary_file -lm -O2
+gcc $FILENAME -o $DIR/binary_file -lm -O2
 compilation=$?
 
 if [ $compilation -eq 0 ]; then
-    for input_file in /box/*.in; do
+    for input_file in $DIR/*.in; do
         output_file="${input_file/.in/.out}"
-        /box/binary_file < "$input_file" > "$output_file"
+        $DIR/binary_file < "$input_file" > "$output_file"
     done
 else
-    echo "ce" > /box/errors.log
+    echo "ce" > $DIR/errors.log
 fi

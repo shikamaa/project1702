@@ -61,6 +61,7 @@ services:
 
   web:
     container_name: 1702app
+    user: "1000:103"
     build: ./app
     ports:
       - "5000:5000"
@@ -81,6 +82,7 @@ services:
 
   worker:
     container_name: 1702worker
+    user: "1000:103"
     build: ./app
     command: celery -A tasks worker --loglevel=info
     env_file: ./.env
