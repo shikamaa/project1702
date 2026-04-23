@@ -15,8 +15,90 @@ import subprocess
 import shutil
 import uuid
 import os
+import pathlib
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
+
+"""
+
+task = [
+    {
+      "input": 1,
+      "output": 2  
+    },
+    {
+      "input": 2,
+      "output": 4          
+    },
+]
+filename = 'Dockerfile'
+parent_dir = os.path.realpath("") 
+
+
+dir = 'temp'
+title = uuid.uuid4().hex
+full_path = os.path.join(parent_dir, dir)
+#print(full_path)
+
+import pathlib
+# structured_path = full_path[0:len(full_path)-len(dir)]
+# final_path = os.path.join(structured_path,dir)
+# print(final_path)
+# try:
+#     os.makedirs(structured_path, exist_ok=True)
+# except OSError as ose:
+#     print(ose)
+
+dirs = pathlib.Path.cwd()
+a = dirs.parent
+
+upload_dir = os.path.join(a,str(title))
+try:
+    os.makedirs(upload_dir,exist_ok=True)
+except OSError as OSerr:
+    print(OSerr)
+
+
+for num, test_case in enumerate(task, start= 1):
+    path1 = pathlib.Path(upload_dir) / f"{num}.in"
+    path1.write_text(str(test_case["input"]))
+    
+    path2 = pathlib.Path(upload_dir) / f"{num}.ans"
+    path2.write_text(str(test_case["output"]))
+
+
+
+
+shutil.copy("a.c", upload_dir)
+shutil.copy("s.sh", upload_dir)
+
+docker_tester = subprocess.run([
+    "docker", "run", "--rm",
+    "-v", f"{upload_dir}:/box",
+    "--network=none",
+    "judge",
+    "sh", "/box/s.sh", "/box/a.c",
+],text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+# print(docker_tester.stdout)
+# print(docker_tester.stderr)
+# print(docker_tester.returncode)
+
+for num, test_case in enumerate(task, start=1):
+    out_path = pathlib.Path(upload_dir) / f"{num}.out"
+    ans_path = pathlib.Path(upload_dir) / f"{num}.ans"
+    
+    out = out_path.read_text().strip()
+    ans = ans_path.read_text().strip()
+    
+    if out == ans:
+        print(f"Test {num}: AC")
+    else:
+        print(f"Test {num}: WA | got: {out} | expected: {ans}")
+
+
+"""
+
 
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
 @login_required
@@ -24,125 +106,62 @@ def new_task_det(task_id):
     current_task = db.session.execute(
         select(Task).where(Task.task_id == task_id)
     ).scalars().one_or_none()
-    
+
     if current_task is None:
         abort(404)
     
+
+    tests = list((current_task.hidden_test_cases or []) + (current_task.test_cases or []))
     if request.method == 'POST':
         file = request.files.get('file')
 
         if not file or not file.filename.endswith('.c'):
             flash("Only .c files are accepted")
             return redirect(url_for('simple_routes.new_task_det', task_id=task_id))
+    
+        submission_directory = uuid.uuid4().hex
+        directories = pathlib.Path.cwd()
+        parent_directories = directories.parent
 
-        submission_id = uuid.uuid4().hex
-        local_dir = os.path.join(os.getenv('FILEPATH'), submission_id) 
-        host_dir = os.path.join(os.getenv('HOST_UPLOADS'), submission_id)
-        
-        
-        os.makedirs(local_dir, exist_ok=True)
-        filepath = os.path.join(local_dir, 'solution.c')
-        file_tests = (current_task.test_cases or []) + (current_task.hidden_test_cases + [])
-        
-        run_judge.delay(file_tests)
-        code_content = ""
-        
+        upload_directory = os.path.join(parent_directories, str(submission_directory))
+
         try:
-            code_content = file.read().decode('utf-8')
-            file.seek(0)
-            file.save(filepath)
+            os.makedirs(upload_directory,exist_ok=True)
+        except OSError as OSerr:
+            print(OSerr)   
+        file.save(os.path.join(upload_directory, "solution.c"))
+        for test_number, test_case in enumerate(tests, start=1):
+            input_path = pathlib.Path(upload_directory) / f"{test_number}.in"      
+            input_path.write_text(str(test_case["input"]))
+
+            answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"      
+            answer_path.write_text(str(test_case["output"]))
+
+        shutil.copy("s.sh", upload_directory)    
+
+        print(upload_directory)
+        print(os.listdir(upload_directory))
+
+        docker_tester = subprocess.run([
+            "docker", "run", "--rm",
+            "-v", f"{upload_directory}:/box",
+            "--network=none",
+            "judge",
+            "sh", "/box/s.sh", "/box/solution.c",
+        ],text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+        for test_number, test_case in enumerate(tests, start=1):
+            out_path = pathlib.Path(upload_directory) / f"{test_number}.out"
+            ans_path = pathlib.Path(upload_directory) / f"{test_number}.ans"
             
-            final_verdict = 'Accepted for testing'
-            passed_count = 0
+            out = out_path.read_text().strip()
+            ans = ans_path.read_text().strip()
             
-            compile_proc = subprocess.run([
-                'docker', 'run', '--rm',
-                '--network=none',
-                '-v', f'{host_dir}:/box',
-                'gcc:latest', 
-                'sh', '-c', 'gcc /box/solution.c -o /box/solution'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            
-            if compile_proc.returncode != 0:
-                final_verdict = 'CE'
+            if out == ans:
+                print(f"Test {test_number}: AC")
             else:
-                open_tests = current_task.test_cases or []
-                hidden_tests = current_task.hidden_test_cases or []
-                all_tests = open_tests + hidden_tests
-                
-                for test_data in all_tests:
-                    test_input = test_data.get("input", "")
-                    expected_output = test_data.get("output", "").strip()
-                    
-                    try:
-                        result = subprocess.run([
-                            'docker', 'run', '--rm', '-i',
-                            f'--memory={current_task.memory_limit}m',
-                            '--cpus=0.5',
-                            '--pids-limit=64',
-                            '--network=none',
-                            '-v', f'{host_dir}:/box',
-                            'judge',
-                            'sh', '-c', '/usr/bin/time -v /box/solution'
-                        ],
-                        input=test_input,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        timeout=current_task.time_limit + 2 
-                        )
-                        
-                        elapsed, memory_kb = parse_time_output(result.stderr)
-                        
-                        if elapsed > current_task.time_limit:
-                            final_verdict = 'TLE'
-                            break
-                        
-                        if memory_kb > current_task.memory_limit * 1024:
-                            final_verdict = 'MLE'
-                            break
+                print(f"Test {test_number}: WA | got: {out} | expected: {ans}")
 
-                        if result.returncode != 0:
-                            final_verdict = 'RE'
-                            break
-                        
-                        actual_output = result.stdout.strip()
-                        if actual_output == expected_output:
-                            passed_count += 1
-                        elif expected_output in actual_output.strip():
-                            final_verdict = 'PE'
-                        else:
-                            final_verdict = 'WA'
-                            break
-                            
-                    except subprocess.TimeoutExpired:
-                        final_verdict = 'TLE'
-                        break
-                    except Exception as e:
-                        print(f"Execution error: {e}")
-                        final_verdict = 'RE'
-                        break
-              
-            total_tests_count = len(current_task.test_cases or []) + len(current_task.hidden_test_cases or [])
-            if passed_count == total_tests_count:
-                final_verdict = 'OK'
-            elif passed_count > 0:
-                final_verdict = 'PS'
-
-            subm = make_submission(current_user.user_id, current_task.task_id, code_content, final_verdict,passed_count, total_tests_count)
-            
-            flash(f"Submission finished with status: {final_verdict}")
-            return redirect(url_for('simple_routes.submission_detailed', submission=subm.submission_id))
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Internal error: {str(e)}")
-            return redirect(url_for('simple_routes.new_task_det', task_id=task_id))
-
-        finally:
-            if os.path.exists(local_dir):
-                shutil.rmtree(local_dir, ignore_errors=True)
-            
     return render_template(
         'new_det_task.html',
         task=current_task,
