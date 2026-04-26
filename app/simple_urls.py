@@ -10,7 +10,7 @@ from models import Task, User, STUDENT, Submission, TEACHER, ADMIN, SubmissionRe
 from navigation import logged_user_menu, unlogged_user_menu
 from functions import change_username, change_password, parse_time_output, make_submission
 
-from tasks import test, run_judge
+from tasks import  run_judge
 import subprocess
 import shutil
 import uuid
@@ -18,87 +18,6 @@ import os
 import pathlib
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
-
-"""
-
-task = [
-    {
-      "input": 1,
-      "output": 2  
-    },
-    {
-      "input": 2,
-      "output": 4          
-    },
-]
-filename = 'Dockerfile'
-parent_dir = os.path.realpath("") 
-
-
-dir = 'temp'
-title = uuid.uuid4().hex
-full_path = os.path.join(parent_dir, dir)
-#print(full_path)
-
-import pathlib
-# structured_path = full_path[0:len(full_path)-len(dir)]
-# final_path = os.path.join(structured_path,dir)
-# print(final_path)
-# try:
-#     os.makedirs(structured_path, exist_ok=True)
-# except OSError as ose:
-#     print(ose)
-
-dirs = pathlib.Path.cwd()
-a = dirs.parent
-
-upload_dir = os.path.join(a,str(title))
-try:
-    os.makedirs(upload_dir,exist_ok=True)
-except OSError as OSerr:
-    print(OSerr)
-
-
-for num, test_case in enumerate(task, start= 1):
-    path1 = pathlib.Path(upload_dir) / f"{num}.in"
-    path1.write_text(str(test_case["input"]))
-    
-    path2 = pathlib.Path(upload_dir) / f"{num}.ans"
-    path2.write_text(str(test_case["output"]))
-
-
-
-
-shutil.copy("a.c", upload_dir)
-shutil.copy("s.sh", upload_dir)
-
-docker_tester = subprocess.run([
-    "docker", "run", "--rm",
-    "-v", f"{upload_dir}:/box",
-    "--network=none",
-    "judge",
-    "sh", "/box/s.sh", "/box/a.c",
-],text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-
-# print(docker_tester.stdout)
-# print(docker_tester.stderr)
-# print(docker_tester.returncode)
-
-for num, test_case in enumerate(task, start=1):
-    out_path = pathlib.Path(upload_dir) / f"{num}.out"
-    ans_path = pathlib.Path(upload_dir) / f"{num}.ans"
-    
-    out = out_path.read_text().strip()
-    ans = ans_path.read_text().strip()
-    
-    if out == ans:
-        print(f"Test {num}: AC")
-    else:
-        print(f"Test {num}: WA | got: {out} | expected: {ans}")
-
-
-"""
-
 
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
 @login_required
@@ -112,6 +31,7 @@ def new_task_det(task_id):
     
 
     tests = list((current_task.hidden_test_cases or []) + (current_task.test_cases or []))
+    results = []
     if request.method == 'POST':
         file = request.files.get('file')
 
@@ -120,21 +40,15 @@ def new_task_det(task_id):
             return redirect(url_for('simple_routes.new_task_det', task_id=task_id))
     
         submission_directory = uuid.uuid4().hex
-        directories = pathlib.Path.cwd()
-        parent_directories = directories.parent
-        print(os.environ.get("HOST_UPLOADS"))
-        upload_base = os.environ.get("HOST_UPLOADS", "/uploads")
 
         container_uploads = "/uploads"
         upload_directory = os.path.join(container_uploads, submission_directory)
-
-        host_uploads = os.environ.get("HOST_UPLOADS", "/uploads")
-        host_upload_directory = os.path.join(host_uploads, submission_directory)
 
         try:
             os.makedirs(upload_directory,exist_ok=True)
             os.chmod(upload_directory, 0o777)
         except OSError as OSerr:
+            abort(500)
             print(OSerr)
 
         file.save(os.path.join(upload_directory, "solution.c"))
@@ -148,35 +62,17 @@ def new_task_det(task_id):
         script_path = pathlib.Path(__file__).parent / "s.sh"
         shutil.copy(script_path, upload_directory)  
 
-        print(upload_directory)
-        print(os.listdir(upload_directory))
+        # print(upload_directory)
+        # print(os.listdir(upload_directory))
+        results = run_judge(tests,upload_directory, submission_directory)
 
-        docker_tester = subprocess.run([
-            "docker", "run", "--rm",
-            "-v", f"{os.environ.get('HOST_UPLOADS')}:/uploads",
-            "--network=none",
-            "judge",
-            "sh", f"/uploads/{submission_directory}/s.sh", f"/uploads/{submission_directory}/solution.c",
-        ], text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        print(docker_tester.stdout)
-        print(docker_tester.stderr)
-        print(docker_tester.returncode)
-        for test_number, test_case in enumerate(tests, start=1):
-            out_path = pathlib.Path(upload_directory) / f"{test_number}.out"
-            ans_path = pathlib.Path(upload_directory) / f"{test_number}.ans"
-            
-            out = out_path.read_text().strip()
-            ans = ans_path.read_text().strip()
-            
-            if out == ans:
-                print(f"Test {test_number}: AC")
-            else:
-                print(f"Test {test_number}: WA | got: {out} | expected: {ans}")
-
+        print(results)
+        
     return render_template(
         'new_det_task.html',
         task=current_task,
-        menu=logged_user_menu()
+        menu=logged_user_menu(),
+        result = results,
     )
             
         

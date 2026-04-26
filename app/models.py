@@ -13,6 +13,32 @@ ADMIN = UserType.ADMIN
 TEACHER = UserType.TEACHER
 STUDENT = UserType.STUDENT
 
+class SubmissionStatus(enum.Enum):
+    PENDING           = 'PENDING'
+    OK                = 'OK'
+    COMPILATION_ERROR = 'CE'
+    RUNTIME_ERROR     = 'RE'
+    TIME_LIMIT        = 'TL'
+    WALL_TIME_LIMIT   = 'WT'
+    MEMORY_LIMIT      = 'ML'
+    WRONG_ANSWER      = 'WA'
+    PRESENTATION_ERROR = 'PE'
+    CHECK_FAILED      = 'CF'
+    PARTIAL_SOLUTION  = 'PS'
+    SECURITY_VIOLATION = 'SV'
+    # ручные
+    PENDING_CHECK     = 'PC'
+    PENDING_REVIEW    = 'PR'
+    ACCEPTED_TESTING  = 'AT'
+    IGNORED           = 'IG'
+    DISQUALIFIED      = 'DQ'
+    REJECTED          = 'RJ'
+    SUMMONED_DEFENCE  = 'SD'
+    STYLE_VIOLATION   = 'CSV'
+    NO_CHANGE         = 'NC'
+    REJUDGE           = 'RJ2'
+    FULL_REJUDGE      = 'FR'
+
 class User(db.Model, UserMixin):
     __tablename__ = 'usrs'
     user_id = db.Column(db.Integer, primary_key=True)

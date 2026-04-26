@@ -1,10 +1,6 @@
+./uploads/*
+uploads
 bin
 include
-lib64
 lib
-uploads/*
-!uploads/.gitkeep
-.env
-pyvenv.cfg
-./app/.env
-redis.conf
+lib64
