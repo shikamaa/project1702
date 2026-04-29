@@ -55,6 +55,15 @@
             <br><br>
             <button type="submit">Compile and Test</button>
         </form>
+
+        {% if result %}
+        <div class="result-container">
+            <h4>Result:</h4>
+            <pre>{{ result }}</pre>
+        </div>
+        {% endif %}
+
+
     </div>
 </body>
 </html>

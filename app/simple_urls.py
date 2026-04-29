@@ -8,14 +8,15 @@ from datetime import timedelta
 from db import db
 from models import Task, User, STUDENT, Submission, TEACHER, ADMIN, SubmissionReview
 from navigation import logged_user_menu, unlogged_user_menu
-from functions import change_username, change_password, parse_time_output, make_submission
-
+from functions import change_username, change_password, make_submission
+import time
 from tasks import  run_judge
-import subprocess
+from subprocess import run
 import shutil
 import uuid
 import os
 import pathlib
+from json import dumps
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
 
@@ -32,6 +33,7 @@ def new_task_det(task_id):
 
     tests = list((current_task.hidden_test_cases or []) + (current_task.test_cases or []))
     results = []
+    final = "CHECKING"
     if request.method == 'POST':
         file = request.files.get('file')
 
@@ -51,28 +53,53 @@ def new_task_det(task_id):
             abort(500)
             print(OSerr)
 
+        source_code = file.read().decode('utf-8')
+        file.seek(0)
         file.save(os.path.join(upload_directory, "solution.c"))
-        for test_number, test_case in enumerate(tests, start=1):
-            input_path = pathlib.Path(upload_directory) / f"{test_number}.in"      
-            input_path.write_text(str(test_case["input"]))
 
-            answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"      
-            answer_path.write_text(str(test_case["output"]))
+        for test_number, test_case in enumerate(tests, start=1):
+            input_data = test_case.get("input") or {}
+            answer_data = test_case.get("output")
+
+            input_path = pathlib.Path(upload_directory) / f"{test_number}.in"
+            if input_data:
+                input_path.write_text(" ".join(str(v) for v in input_data.values()))
+            else:
+                input_path.write_text("")
+
+            answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"
+            answer_path.write_text(str(answer_data) if answer_data is not None else "")
 
         script_path = pathlib.Path(__file__).parent / "s.sh"
         shutil.copy(script_path, upload_directory)  
 
         # print(upload_directory)
         # print(os.listdir(upload_directory))
-        results = run_judge(tests,upload_directory, submission_directory)
+        results, final, passed_tests_count = run_judge(tests,upload_directory, submission_directory, current_task.time_limit, current_task.memory_limit)
 
-        print(results)
-        
+        new_submission = Submission(
+        user_id=int(current_user.user_id),
+        task_id=current_task.task_id,
+        code=source_code,
+        status=final,
+        passed_tests=passed_tests_count,
+        total_tests=len(tests),
+        )
+        db.session.add(new_submission)
+        db.session.commit()
+
+        # print('dumps:' /
+        #       dumps(current_task))
+        #SHUTIL DIR EXCEPT LOGS
+        return redirect(url_for('simple_routes.submission_detailed', submission_id = new_submission.submission_id))
+    print(results)
+    
+    
     return render_template(
         'new_det_task.html',
         task=current_task,
         menu=logged_user_menu(),
-        result = results,
+        result = "CHECKING",
     )
             
         

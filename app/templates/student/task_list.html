@@ -26,7 +26,11 @@
                     {{ task.task_name }}
                 </a>
             </h3>
-            <p>{{ task.task_description[:110] }}{% if task.task_description %}...{% endif %}</p>
+            <p>
+                {% if task.task_description %}
+                    {{ task.task_description[:110] }}{% if task.task_description|length > 110 %}...{% endif %}
+                {% endif %}
+            </p>
         </div>
         {% endfor %}
     </div>

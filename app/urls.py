@@ -14,8 +14,8 @@ import json
 from dotenv import load_dotenv
 from sqlalchemy import select
 import shutil
-import redis
-from functions import parse_time_output
+
+
 load_dotenv()
 
 routes = Blueprint('routes', __name__, template_folder ='../templates')

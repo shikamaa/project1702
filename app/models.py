@@ -14,30 +14,30 @@ TEACHER = UserType.TEACHER
 STUDENT = UserType.STUDENT
 
 class SubmissionStatus(enum.Enum):
-    PENDING           = 'PENDING'
-    OK                = 'OK'
+    PENDING = 'PENDING'
+    OK = 'OK'
     COMPILATION_ERROR = 'CE'
-    RUNTIME_ERROR     = 'RE'
-    TIME_LIMIT        = 'TL'
-    WALL_TIME_LIMIT   = 'WT'
-    MEMORY_LIMIT      = 'ML'
-    WRONG_ANSWER      = 'WA'
+    RUNTIME_ERROR = 'RE'
+    TIME_LIMIT = 'TL'
+    WALL_TIME_LIMIT = 'WT'
+    MEMORY_LIMIT = 'ML'
+    WRONG_ANSWER = 'WA'
     PRESENTATION_ERROR = 'PE'
-    CHECK_FAILED      = 'CF'
-    PARTIAL_SOLUTION  = 'PS'
+    CHECK_FAILED = 'CF'
+    PARTIAL_SOLUTION = 'PS'
     SECURITY_VIOLATION = 'SV'
-    # ручные
-    PENDING_CHECK     = 'PC'
-    PENDING_REVIEW    = 'PR'
-    ACCEPTED_TESTING  = 'AT'
-    IGNORED           = 'IG'
-    DISQUALIFIED      = 'DQ'
-    REJECTED          = 'RJ'
-    SUMMONED_DEFENCE  = 'SD'
-    STYLE_VIOLATION   = 'CSV'
-    NO_CHANGE         = 'NC'
-    REJUDGE           = 'RJ2'
-    FULL_REJUDGE      = 'FR'
+
+    PENDING_CHECK = 'PC'
+    PENDING_REVIEW = 'PR'
+    ACCEPTED_TESTING = 'AT'
+    IGNORED = 'IG'
+    DISQUALIFIED = 'DQ'
+    REJECTED = 'RJ'
+    SUMMONED_DEFENCE = 'SD'
+    STYLE_VIOLATION = 'CSV'
+    NO_CHANGE = 'NC'
+    REJUDGE = 'RJ2'
+    FULL_REJUDGE = 'FR'
 
 class User(db.Model, UserMixin):
     __tablename__ = 'usrs'
@@ -80,6 +80,8 @@ class Task(db.Model):
 class Submission(db.Model):
     __tablename__ = 'submissions'
     submission_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+
+    # username = db.Column(db.String(30), db.ForeignKey('usrs.username'), nullable=False)
     user_id = db.Column(db.BigInteger, db.ForeignKey('usrs.user_id'), nullable=False)
     task_id = db.Column(db.BigInteger, db.ForeignKey('tasks.task_id'), nullable=False)
     
@@ -87,11 +89,12 @@ class Submission(db.Model):
     status = db.Column(db.String(20), nullable=False, default='pending')
     passed_tests = db.Column(db.Integer, nullable=False, default=0)
     total_tests = db.Column(db.Integer, nullable=False, default=0)
-    error_message = db.Column(db.Text, default='None') 
+    # error_message = db.Column(db.Text, default='None') 
     comment = db.Column(db.Text)
     submitted_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     
-    user = db.relationship('User', foreign_keys=[user_id])
+    # username_rel = db.relationship('User', foreign_keys=[username])
+    user_id_rel = db.relationship('User', foreign_keys=[user_id])
     task = db.relationship('Task', foreign_keys=[task_id])
     
     def __repr__(self):

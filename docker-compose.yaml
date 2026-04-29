@@ -12,6 +12,8 @@ services:
       - "3432:5432"
     volumes:
       - 1702data:/var/lib/postgresql/data
+      # - ./postgres_scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./uploads:/uploads
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${USR}"]
       interval: 10s
@@ -49,6 +51,8 @@ services:
       - .env
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-defaultpassword}
+    # volumes:
+    #   - ./uploads:/uploads
     networks:
       - app-network
     logging:
@@ -61,7 +65,7 @@ services:
 
   web:
     container_name: 1702app
-    user: "1000:103"
+    # user: "1000:103"
     build: ./app
     ports:
       - "5000:5000"
@@ -73,7 +77,7 @@ services:
     env_file:
       - ./.env
     environment:
-      - HOST_UPLOADS=${PWD}/uploads/
+      - HOST_UPLOADS=${PWD}/uploads
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock 
       - ./uploads:/uploads
@@ -82,12 +86,12 @@ services:
 
   worker:
     container_name: 1702worker
-    user: "1000:103"
+    # user: "1000:103"
     build: ./app
     command: celery -A tasks worker --loglevel=info
     env_file: ./.env
     environment:
-      - HOST_UPLOADS=${PWD}/uploads/
+      - HOST_UPLOADS=${PWD}/uploads
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./uploads:/uploads
