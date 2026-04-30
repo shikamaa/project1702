@@ -92,7 +92,10 @@ def propose_task():
             print(f"Database error: {e}")
             flash('Database error', 'error')
 
-    return render_template('propose_task.html', menu=logged_user_menu())
+    return render_template(
+        'propose_task.html',
+        title='Commit task',
+        menu=logged_user_menu())
 
 @teacher_urls.route('/submission/<int:submission_id>/review', methods=['POST'])
 @teacher_required

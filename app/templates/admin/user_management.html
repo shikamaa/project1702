@@ -1,6 +1,8 @@
 <html>
 <head>
-
+    <title> {{ title }} </title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href = "{{url_for('static',filename="style.css" )}}">
 </head>
 
 <body>
@@ -10,15 +12,34 @@
             <a href = "{{ url_for(m.url) }} "> {{ m.name }} </a>
         </li>
         {% endfor %}
-
+    </ul>
+    <div class = "users-panel">
         <table>
-
-            
-
+            <thead>
+                <tr>
+                    {% for column in columns %}
+                    <th> {{ column }} </th>
+                    {% endfor %}
+                </tr>   
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td> {{ user.user_id }} </td>
+                        <td> {{user.username }} </td>
+                        <td> {{user.first_name }} </td>
+                        <td> {{user.last_name }} </td>
+                        <td> {{user.user_role.name.title() }} </td>
+                        <td> {{ user.reg_date }} </td>
+                        <td> Set role </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
 
         </table>
 
-    </ul>
+    </div>
+    
 
 </body>
 </html>

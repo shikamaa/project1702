@@ -75,8 +75,8 @@ def new_task_det(task_id):
 
         # print(upload_directory)
         # print(os.listdir(upload_directory))
-        results, final, passed_tests_count = run_judge(tests,upload_directory, submission_directory, current_task.time_limit, current_task.memory_limit)
-
+        results, final, passed_tests_count, stderr, stdout = run_judge(tests,upload_directory, submission_directory, current_task.time_limit, current_task.memory_limit)
+        print(stderr,  "\n", stdout)
         new_submission = Submission(
         user_id=int(current_user.user_id),
         task_id=current_task.task_id,
@@ -97,6 +97,7 @@ def new_task_det(task_id):
     
     return render_template(
         'new_det_task.html',
+        title=f"Task {task_id}",
         task=current_task,
         menu=logged_user_menu(),
         result = "CHECKING",
