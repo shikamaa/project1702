@@ -25,19 +25,15 @@
             <tbody>
                 {% for submission in submissions %}
                     <tr>
-                        <td> {{ submission.task.task_name }} </td>
-                        <td> {{ submission.status }} </td>
+                        <td> <a href="{{ url_for('simple_routes.new_task_det', task_id=submission.task_id) }}"> {{ submission.task_name }} </a> </td>
+                        <td> {{ submission.status.value }} </td>
                         <td> {{ submission.passed_tests }} / {{ submission.total_tests }}</td>
                         <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }} </td>
-                        <td> <a href="{{ url_for('simple_routes.submission_detailed', submission_id=submission.submission_id) }}"> Go to details</a> </td>
+                        <td> <a href="{{ url_for('simple_routes.submission_detailed', submission_id=submission.submission_id) }}"> Go to details </a> </td>
                     </tr>
                 {% endfor %}
             </tbody>
-
         </table>
-
     </div>
-
-
 </body>
 </html>

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from flask import render_template, redirect, url_for, request, flash, Blueprint
 
 import json
@@ -10,29 +10,43 @@ from flask_login import current_user
 
 teacher_urls = Blueprint('teacher_urls', __name__, template_folder = 'templates/teacher/')
 
+@teacher_urls.patch('/submission/<int:submission_id>/status/<string:new_status>')
+def change_submission_status(submission_id: int, new_status: str):
+        stmt = (
+            update(Submission)
+            .where(Submission.submission_id == submission_id)
+            .values(status=new_status)
+        )
+        db.session.execute(stmt)
+        db.session.commit()
+        return redirect(url_for('all_submissions'))
+
 @teacher_urls.route('/student_submissions')
 @teacher_required
 def all_submissions():
-    # all_submissions = Submission.query \
-    #     .join(User) \
-    #     .filter(User.user_role == STUDENT) \
-    #     .order_by(Submission.submitted_at.desc()) \
-    #     .all()
-    query  = (
-        select(Submission).
-        join(User, User.user_role == STUDENT).
-        order_by(Submission.submitted_at.desc())
-    )
-    all_submissions = db.session.execute(query).scalars().all()
+    query = select(
+        User.username,
+        Submission.submission_id,
+        Submission.task_id,
+        Task.task_name,
+        Submission.status,
+        Submission.passed_tests,
+        Submission.total_tests,
+        Submission.submitted_at
+    ).join(User, User.user_id == Submission.user_id)\
+    .join(Task, Task.task_id == Submission.task_id)\
+    .order_by(User.user_id)
     
+    all_submissions = db.session.execute(query).all()
     
     return render_template(
         'submissions.html',
         title="Student submissions",
         data = all_submissions, 
-        menu=logged_user_menu()
-        )
-
+        menu=logged_user_menu(),
+        columns = ['Username', 'Task Name','Status','Tests','Submitted at','Details'],
+        submissions = all_submissions
+    )
 
 @teacher_urls.route('/propose_task', methods=['GET', 'POST'])
 @teacher_required

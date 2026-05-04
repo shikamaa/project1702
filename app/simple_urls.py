@@ -1,4 +1,4 @@
-from flask import render_template, Blueprint, redirect, url_for, request, flash, abort
+from flask import render_template, Blueprint, redirect, url_for, request, flash, abort, jsonify
 from flask_login import login_required, logout_user, current_user, login_user
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, load_only
@@ -11,12 +11,10 @@ from navigation import logged_user_menu, unlogged_user_menu
 from functions import change_username, change_password, make_submission
 import time
 from tasks import  run_judge
-from subprocess import run
 import shutil
 import uuid
 import os
 import pathlib
-from json import dumps
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
 
@@ -30,10 +28,8 @@ def new_task_det(task_id):
     if current_task is None:
         abort(404)
     
-
     tests = list((current_task.hidden_test_cases or []) + (current_task.test_cases or []))
-    results = []
-    final = "CHECKING"
+
     if request.method == 'POST':
         file = request.files.get('file')
 
@@ -58,52 +54,57 @@ def new_task_det(task_id):
         file.save(os.path.join(upload_directory, "solution.c"))
 
         for test_number, test_case in enumerate(tests, start=1):
-            input_data = test_case.get("input") or {}
-            answer_data = test_case.get("output")
+            input_data = test_case.get("input") or ""
+            answer_data = test_case.get("output") or ""
 
             input_path = pathlib.Path(upload_directory) / f"{test_number}.in"
-            if input_data:
-                input_path.write_text(" ".join(str(v) for v in input_data.values()))
-            else:
-                input_path.write_text("")
+            input_path.write_text(input_data)
 
             answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"
-            answer_path.write_text(str(answer_data) if answer_data is not None else "")
+            answer_path.write_text(str(answer_data))
 
-        script_path = pathlib.Path(__file__).parent / "s.sh"
-        shutil.copy(script_path, upload_directory)  
+            script_path = pathlib.Path(__file__).parent / "s.sh"
+            shutil.copy(script_path, upload_directory)  
 
-        # print(upload_directory)
-        # print(os.listdir(upload_directory))
-        results, final, passed_tests_count, stderr, stdout = run_judge(tests,upload_directory, submission_directory, current_task.time_limit, current_task.memory_limit)
-        print(stderr,  "\n", stdout)
         new_submission = Submission(
-        user_id=int(current_user.user_id),
-        task_id=current_task.task_id,
-        code=source_code,
-        status=final,
-        passed_tests=passed_tests_count,
-        total_tests=len(tests),
+            user_id=int(current_user.user_id),
+            task_id=current_task.task_id,
+            code=source_code,
+            celery_task_id = submission_directory,
+            total_tests=len(tests)
         )
+
         db.session.add(new_submission)
         db.session.commit()
 
-        # print('dumps:' /
-        #       dumps(current_task))
-        #SHUTIL DIR EXCEPT LOGS
+        celery_task  = run_judge.delay( tests,upload_directory, submission_directory, current_task.time_limit, \
+                               current_task.memory_limit, new_submission.submission_id)
+        
+        new_submission.celery_task_id = celery_task.id
+        db.session.commit()
+
         return redirect(url_for('simple_routes.submission_detailed', submission_id = new_submission.submission_id))
-    print(results)
-    
     
     return render_template(
         'new_det_task.html',
         title=f"Task {task_id}",
         task=current_task,
-        menu=logged_user_menu(),
-        result = "CHECKING",
+        menu=logged_user_menu()
     )
             
-        
+@simple_routes.get("/submission/<int:submission_id>/status")
+@login_required
+def submission_status(submission_id):
+    query = select(Submission).where(Submission.submission_id == submission_id)
+    sub = db.session.execute(query).scalar_one_or_none()
+    if sub is None:
+        abort(404)
+    return jsonify({
+        'status': sub.status.value, 
+        'passed': sub.passed_tests,
+        'total': sub.total_tests,
+    })
+
 @simple_routes.route('/')
 def main_page():
     if current_user.is_authenticated:
@@ -114,7 +115,7 @@ def main_page():
         title='1702 Main page',
         menu=unlogged_user_menu(),
         name=current_user
-        )
+    )
     
 
 @simple_routes.errorhandler(BadRequest)
@@ -210,10 +211,10 @@ def logout():
     logout_user()
     return redirect(url_for('simple_routes.login_page'))
 
-@simple_routes.route('/tasks')
+@simple_routes.get('/tasks')
 @login_required
 def show_tasks():
-    query = select(Task).filter_by(status = True)
+    query = select(Task).filter_by(is_active=True)
     task_list = db.session.execute(query).scalars().all()   
     return render_template(
         'task_list.html',
@@ -223,35 +224,42 @@ def show_tasks():
         usr = current_user.username
     )
 
-@simple_routes.get("/tasks/<int:task_id>")
-@login_required
-def show_task_detailed(task_id: int):
-    task = db.session.get(Task, task_id)
-    if task is None:
-        abort(404)
+# @simple_routes.get("/tasks/<int:task_id>")
+# @login_required
+# def show_task_detailed(task_id: int):
+#     task = db.session.get(Task, task_id)
+#     if task is None:
+#         abort(404)
     
-    return render_template(
-        'task_detailed.html',
-        title=f'Task {task_id}',
-        menu=logged_user_menu(),
-        task=task,
-        output=None,
-        usr = current_user.user_role.name 
-    )
+#     return render_template(
+#         'task_detailed.html',
+#         title=f'Task {task_id}',
+#         menu=logged_user_menu(),
+#         task=task,
+#         output=None,
+#         usr = current_user.user_role.name 
+#     )
     
-@simple_routes.route('/user_submissions')
+@simple_routes.get('/user_submissions')
 @login_required
 def user_submissions():
+    # query = (
+    #         select(Submission).where(Submission.user_id == current_user.user_id).
+    #         options(load_only(Submission.submission_id, Submission.status, Submission.submitted_at, Submission.passed_tests, Submission.total_tests),
+    #         joinedload(Submission.task).load_only(Task.task_name)).order_by(Submission.submitted_at.desc())
+    #         )
+    query = select(
+        Submission.submission_id,
+        Submission.task_id,
+        Task.task_name,
+        Submission.status,
+        Submission.passed_tests,
+        Submission.total_tests,
+        Submission.submitted_at
+    ).join(Task, Task.task_id == Submission.task_id)
 
-    query = (
-            select(Submission).where(Submission.user_id == current_user.user_id).
-            options(load_only(Submission.submission_id, Submission.status, Submission.submitted_at, Submission.passed_tests, Submission.total_tests),
-            joinedload(Submission.task).load_only(Task.task_name)).order_by(Submission.submitted_at.desc())
-            )
-    
-    user_submissions = (db.session.execute(query)).scalars().all()    
+    user_submissions = (db.session.execute(query)).all()    
 
-    
     return render_template(
         'user_submissions.html',
         title='My submissions',
@@ -260,11 +268,10 @@ def user_submissions():
         submissions = user_submissions
     )
     
-@simple_routes.route('/submission/<int:submission_id>')
+@simple_routes.get('/submission/<int:submission_id>')
 @login_required
 def submission_detailed(submission_id):
     submission = Submission.query.get_or_404(submission_id)
-    
     
     return render_template('submission_detailed.html',
                          title=f'Submission #{submission_id}',

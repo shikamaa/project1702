@@ -14,27 +14,28 @@
             <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
         {% endfor %}
     </ul>
-    
-    <table>
-        <thead>
-            <tr>
-                {% for column in columns %}
-                    <th> {{ column }} </th>
-                {% endfor %}
-            </tr>   
-        </thead>
-        <tbody>
-            {% for submission in submissions %}
+    <div class = "submission-panel">    
+        <table>
+            <thead>
                 <tr>
-                    <td> {{ submission.task.task_name }} </td>
-                    <td> {{ submission.status.value }} </td>
-                    <td> {{ submission.passed_tests }} / {{ submission.total_tests }}</td>
-                    <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }} </td>
-                    <td> <a href="{{ url_for('simple_routes.submission_detailed', submission_id=submission.submission_id) }}"> Go to details</a> </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
+                    {% for column in columns %}
+                        <th> {{ column }} </th>
+                    {% endfor %}
+                </tr>   
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                    <tr>
+                        <td> {{ submission.username }} </td>
+                        <td> {{ submission.task_name }} </td>
+                        <td> {{ submission.status.value }} </td>
+                        <td> {{ submission.passed_tests }} / {{ submission.total_tests }}</td>
+                        <td> {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }} </td>
+                        <td> <a href="{{ url_for('simple_routes.submission_detailed', submission_id=submission.submission_id) }}"> Go to details</a> </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>
