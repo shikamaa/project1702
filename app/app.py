@@ -41,8 +41,7 @@ with app.app_context():
 from tasks import celery_init_app
 
 celery_init_app(app)
-
-
+celery = app.extensions["celery"]
 from urls import teacher_bp, admin_bp, routes
 from simple_urls import simple_routes
 #handle_bad_request
@@ -61,8 +60,6 @@ app.register_blueprint(simple_routes)
 app.register_blueprint(admin_routes)
 app.register_blueprint(teacher_urls)
 # app.register_error_handler(400,handle_bad_request)
-
-    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

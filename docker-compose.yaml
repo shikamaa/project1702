@@ -88,7 +88,7 @@ services:
     container_name: 1702worker
     # user: "1000:103"
     build: ./app
-    command: celery -A tasks worker --loglevel=info
+    command: celery -A app:celery worker --loglevel=info
     env_file: ./.env
     environment:
       - HOST_UPLOADS=${PWD}/uploads
@@ -96,8 +96,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./uploads:/uploads
     depends_on:
-      - redis
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 

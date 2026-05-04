@@ -1,27 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title> {{title }} </title>
+    <title>{{ title }}</title>
     <meta charset="utf-8">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <ul>
     {% for m in menu %}
-        <li> <a href="{{ url_for( m.url )}}"> {{ m.name }}</a></li>
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
     {% endfor %}
     </ul>
 
     {% if submission %}
-        {{ submission.code }}
-        <br>
-        {{ submission.status }}
-        <br>
-        {{ submission.submitted_at}}
-        <br>
-        {{ submission.passed_tests}}/{{submission.total_tests}}
+        <pre>{{ submission.code }}</pre>
+
+        <p>Status: <span id="status">{{ submission.status.value }}</span></p>
+        <p>Tests: <span id="tests">{{ submission.passed_tests }}/{{ submission.total_tests }}</span></p>
+        <p>Submitted: {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</p>
+        <p>{{ submission.error_message }}</p>
     {% else %}
         NO
-    {% endif %} 
+    {% endif %}
+
+    {% if submission and submission.status.value == 'PENDING' %}
+<script>
+    const submissionId = parseInt("{{ submission.submission_id }}");
+        const POLL_INTERVAL = 1500;
+        const TERMINAL = ['OK','CE','RE','TL','ML','WA','PS'];
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/submission/${submissionId}/status`);
+                const data = await res.json();
+
+                document.getElementById('status').textContent = data.status;
+                document.getElementById('tests').textContent = `${data.passed}/${data.total}`;
+
+                if (TERMINAL.includes(data.status)) {
+                    clearInterval(interval);
+                    location.reload();
+                }
+            } catch (e) {
+                console.error('Poll error:', e);
+            }
+        }, POLL_INTERVAL);
+    </script>
+    {% endif %}
 </body>
 </html>
