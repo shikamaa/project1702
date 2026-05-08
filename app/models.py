@@ -14,30 +14,31 @@ TEACHER = UserType.TEACHER
 STUDENT = UserType.STUDENT
 
 class SubmissionStatus(enum.Enum):
-    PENDING = 'PENDING'
+    REVIEWED = 'Reviewed'
+    PENDING = 'Pending'
     OK = 'OK'
-    COMPILATION_ERROR = 'CE'
-    RUNTIME_ERROR = 'RE'
-    TIME_LIMIT = 'TL'
-    WALL_TIME_LIMIT = 'WT'
-    MEMORY_LIMIT = 'ML'
-    WRONG_ANSWER = 'WA'
-    PRESENTATION_ERROR = 'PE'
-    CHECK_FAILED = 'CF'
-    PARTIAL_SOLUTION = 'PS'
-    SECURITY_VIOLATION = 'SV'
+    COMPILATION_ERROR = 'Compilation Error'
+    RUNTIME_ERROR = 'Runtime Error'
+    TIME_LIMIT = 'Time Limit'
+    WALL_TIME_LIMIT = 'Wall Time Limit'
+    MEMORY_LIMIT = 'Memory Limit'
+    WRONG_ANSWER = 'Wrong Answer'
+    PRESENTATION_ERROR = 'Presentation Error'
+    CHECK_FAILED = 'Check Failed'
+    PARTIAL_SOLUTION = 'Partial Solution'
+    SECURITY_VIOLATION = 'Security Violation'
 
-    PENDING_CHECK = 'PC'
-    PENDING_REVIEW = 'PR'
-    ACCEPTED_TESTING = 'AT'
-    IGNORED = 'IG'
-    DISQUALIFIED = 'DQ'
-    REJECTED = 'RJ'
-    SUMMONED_DEFENCE = 'SD'
-    STYLE_VIOLATION = 'CSV'
-    NO_CHANGE = 'NC'
-    REJUDGE = 'RJ2'
-    FULL_REJUDGE = 'FR'
+    PENDING_CHECK = 'Pending Check'
+    PENDING_REVIEW = 'Pending Review'
+    ACCEPTED_TESTING = 'Accepted Testing'
+    IGNORED = 'Ignored'
+    DISQUALIFIED = 'Disqualified'
+    REJECTED = 'Rejected'
+    SUMMONED_DEFENCE = 'Summoned Defence'
+    STYLE_VIOLATION = 'Style Violation'
+    NO_CHANGE = 'No Change'
+    REJUDGE = 'Rejudge'
+    FULL_REJUDGE = 'Full Rejudge'
 
 class User(db.Model, UserMixin):
     __tablename__ = 'usrs'
@@ -69,7 +70,6 @@ class Task(db.Model):
     memory_limit = db.Column(db.Integer, nullable=False, default=128)
     time_limit = db.Column(db.Integer, nullable=False, default=2)
     is_active = db.Column(db.Boolean, default=False)
-    
     submissions = db.relationship('Submission', backref='tasks_ref', 
                                   cascade='all, delete-orphan',
                                   foreign_keys='Submission.task_id')
@@ -82,18 +82,14 @@ class Submission(db.Model):
     submission_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     user_id = db.Column(db.BigInteger, db.ForeignKey('usrs.user_id'), nullable=False)
     task_id = db.Column(db.BigInteger, db.ForeignKey('tasks.task_id'), nullable=False)
-    
     code = db.Column(db.Text, nullable=False)
     status = db.Column(SAEnum(SubmissionStatus), nullable=False, default=SubmissionStatus.PENDING)
-
     passed_tests = db.Column(db.Integer, nullable=False, default=0)
     total_tests = db.Column(db.Integer, nullable=False, default=0)
     error_message = db.Column(db.Text, default='None') 
     comment = db.Column(db.Text)
     submitted_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-
     celery_task_id = db.Column(db.String(64),nullable=False)
-
     user_id_rel = db.relationship('User', foreign_keys=[user_id])
     task = db.relationship('Task', foreign_keys=[task_id])
     
@@ -107,6 +103,5 @@ class SubmissionReview(db.Model):
     teacher_id = db.Column(db.BigInteger, db.ForeignKey('usrs.user_id'), nullable=False)
     reviewed_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
     comment = db.Column(db.Text)
-
     submission = db.relationship('Submission', backref='reviews')
     teacher = db.relationship('User', foreign_keys=[teacher_id])
