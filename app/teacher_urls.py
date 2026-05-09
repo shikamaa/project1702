@@ -1,27 +1,36 @@
 from sqlalchemy import select, update
 from flask import render_template, redirect, url_for, request, flash, Blueprint
-
 import json
 from db import db
 from navigation import logged_user_menu
 from login import teacher_required
 from models import User, Task, Submission,SubmissionReview, STUDENT, ADMIN, STUDENT
 from flask_login import current_user
-
+import logging
 teacher_urls = Blueprint('teacher_urls', __name__, template_folder = 'templates/teacher/')
 
+logger = logging.getLogger(__name__)
+
 @teacher_urls.patch('/submission/<int:submission_id>/status/<string:new_status>')
+@teacher_required
 def change_submission_status(submission_id: int, new_status: str):
-        stmt = (
-            update(Submission)
-            .where(Submission.submission_id == submission_id)
-            .values(status=new_status)
-        )
-        db.session.execute(stmt)
-        db.session.commit()
+        submission = db.session.get(Submission, submission_id)
+        if submission is not None:
+            task = db.session.get(Task, Submission.task_id)
+            query = (
+                update(Submission)
+                .where(Submission.submission_id == submission_id).
+                values(status=new_status)
+            )
+            db.session.execute(query)
+            db.session.commit()
+            logger.info(f'User {current_user.username} change status of submission {Submission.submission_id}: {task.task_name}')
+            flash('Status changed sucessfully')
+        else:
+            flash('Submission status changed sucessfully')   
         return redirect(url_for('all_submissions'))
 
-@teacher_urls.route('/student_submissions')
+@teacher_urls.get('/student_submissions')
 @teacher_required
 def all_submissions():
     query = select(
@@ -111,10 +120,10 @@ def propose_task():
         title='Commit task',
         menu=logged_user_menu())
 
-@teacher_urls.route('/submission/<int:submission_id>/review', methods=['POST'])
+@teacher_urls.post('/submission/<int:submission_id>/review')
 @teacher_required
 def review_submission(submission_id):
-    submission = Submission.query.get_or_404(submission_id)
+    submission = db.session.get(Submission, submission_id)
     submission.status = request.form.get('status')
     submission.comment = request.form.get('comment')
 
