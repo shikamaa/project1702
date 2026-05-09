@@ -30,7 +30,7 @@ def change_status_task(task_id: int):
     if current_task is not None:
         current_task.is_active = not current_task.is_active
         db.session.commit()
-        status = 'enabled' if current_task.status is True else 'disabled' 
+        status = 'enabled' if current_task.is_active is True else 'disabled' 
         logger.info(f'User {current_user.username} change status of the task {current_task.task_id}: {current_task.task_name} {status}')
     else:
         abort(404)
@@ -50,7 +50,7 @@ def get_users():
         users = users
     )
 
-@admin_routes.post("/users/<int:u_id>/change_role/<string:role>")
+@admin_routes.post("/users/<int:user_id>/change_role/<string:role>")
 @admin_required
 def change_user_role(user_id, role):
     selected_user = db.session.get(User, user_id)

@@ -1,5 +1,5 @@
 from sqlalchemy import select, update
-from flask import render_template, redirect, url_for, request, flash, Blueprint
+from flask import render_template, redirect, url_for, request, flash, Blueprint, abort
 import json
 from db import db
 from navigation import logged_user_menu
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def change_submission_status(submission_id: int, new_status: str):
         current_submission = db.session.get(Submission, submission_id)
         if current_submission is not None:
-            task = db.session.get(Task, Submission.task_id)
+            task = db.session.get(Task, current_submission.task_id)
             query = (
                 update(Submission)
                 .where(Submission.submission_id == submission_id).
@@ -28,7 +28,7 @@ def change_submission_status(submission_id: int, new_status: str):
             flash('Status changed sucessfully')
         else:
             flash('Submission status changed sucessfully')   
-        return redirect(url_for('all_submissions'))
+        return redirect(url_for('teacher_urls.all_submissions'))
 
 @teacher_urls.get('/student_submissions')
 @teacher_required
@@ -98,7 +98,7 @@ def propose_task():
                 hidden_test_cases=hidden_test_cases,
                 memory_limit=memory_limit,
                 time_limit=time_limit,
-                status=True
+                is_active=True
             )
 
             db.session.add(new_task)
@@ -123,6 +123,9 @@ def propose_task():
 @teacher_required
 def review_submission(submission_id):
     current_submission = db.session.get(Submission, submission_id)
+    if current_submission is None:
+        abort(404)
+        
     current_submission.status = request.form.get('status')
     current_submission.comment = request.form.get('comment')
 
