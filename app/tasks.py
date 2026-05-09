@@ -42,7 +42,7 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str, tim
         str(timeout), str(mem_kb)        
     ], text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
-    if docker_tester.returncode == 1:
+    if docker_tester.returncode != 0:
         compile_text = ""
         compile_log = pathlib.Path(upload_directory) / 'compile.log'
         if compile_log.exists():
