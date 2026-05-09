@@ -13,23 +13,25 @@ logger = logging.getLogger(__name__)
 @admin_routes.post('/tasks/delete/<int:task_id>')
 @admin_required
 def delete_task(task_id: int): 
-    task = db.session.get(Task, task_id)
-    db.session.delete(task)
-    db.session.commit()
-    logger.info(f'Task {task_id} sucessfully deleted!')
-    flash(f'Task {task_id} sucessfully deleted!')
-
+    current_task = db.session.get(Task, task_id)
+    if current_task is not None:
+        db.session.delete(current_task)
+        db.session.commit()
+        logger.info(f'Task {current_task.task_id} sucessfully deleted!')
+        flash(f'Task {current_task.task_id} sucessfully deleted!')
+    else:
+        flash(f'Task {task_id} did not found')
     return redirect(url_for('simple_routes.show_tasks'))
 
 @admin_routes.post('/tasks/change-status-task/<int:task_id>')
 @admin_required
 def change_status_task(task_id: int):
-    task = db.session.get(Task, task_id)
-    if task is not None:
-        task.is_active = not task.is_active
+    current_task = db.session.get(Task, task_id)
+    if current_task is not None:
+        current_task.is_active = not current_task.is_active
         db.session.commit()
-        status = 'enabled' if task.status is True else 'disabled' 
-        logger.info(f'User {current_user.username} change status of the task {task_id}: {task.name} {status}')
+        status = 'enabled' if current_task.status is True else 'disabled' 
+        logger.info(f'User {current_user.username} change status of the task {current_task.task_id}: {current_task.task_name} {status}')
     else:
         abort(404)
 
@@ -40,7 +42,6 @@ def change_status_task(task_id: int):
 def get_users():
     users = db.session.execute(select(User)).scalars().all()
     fields = ["User ID", "Username", "First name", "Last name", "Role", "Registration date"]
-    
     return render_template(
         'admin/user_management.html',
         title='User Management',                 

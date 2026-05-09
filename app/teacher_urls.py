@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 @teacher_urls.patch('/submission/<int:submission_id>/status/<string:new_status>')
 @teacher_required
 def change_submission_status(submission_id: int, new_status: str):
-        submission = db.session.get(Submission, submission_id)
-        if submission is not None:
+        current_submission = db.session.get(Submission, submission_id)
+        if current_submission is not None:
             task = db.session.get(Task, Submission.task_id)
             query = (
                 update(Submission)
@@ -24,7 +24,7 @@ def change_submission_status(submission_id: int, new_status: str):
             )
             db.session.execute(query)
             db.session.commit()
-            logger.info(f'User {current_user.username} change status of submission {Submission.submission_id}: {task.task_name}')
+            logger.info(f'User {current_user.username} change status of submission {current_submission.submission_id}: {task.task_name}')
             flash('Status changed sucessfully')
         else:
             flash('Submission status changed sucessfully')   
@@ -90,8 +90,7 @@ def propose_task():
                     flash('JSON Error in hidden tests', 'error')
                     return redirect(url_for('teacher_urls.propose_task'))
 
-            is_active = True if current_user.user_role == ADMIN else False
-
+            
             new_task = Task(
                 task_name=task_name,
                 task_description=task_description,
@@ -99,7 +98,7 @@ def propose_task():
                 hidden_test_cases=hidden_test_cases,
                 memory_limit=memory_limit,
                 time_limit=time_limit,
-                status=is_active
+                status=True
             )
 
             db.session.add(new_task)
@@ -123,9 +122,9 @@ def propose_task():
 @teacher_urls.post('/submission/<int:submission_id>/review')
 @teacher_required
 def review_submission(submission_id):
-    submission = db.session.get(Submission, submission_id)
-    submission.status = request.form.get('status')
-    submission.comment = request.form.get('comment')
+    current_submission = db.session.get(Submission, submission_id)
+    current_submission.status = request.form.get('status')
+    current_submission.comment = request.form.get('comment')
 
     review = SubmissionReview.query.filter_by(
         submission_id=submission_id,
