@@ -47,7 +47,7 @@
         {% endif %}
 
     <div class="compile-button">  
-        <form action="{{ url_for('simple_routes.compile_file') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ url_for('simple_routes.task_detailed', task_id=task.task_id) }}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="task_id" value="{{ task.task_id }}">
 
             <label for="file">Choose your C file:</label>
@@ -56,22 +56,6 @@
             <button type="submit">Compile and Test</button>
         </form>
     </div>
-    {% if final_verdict %}
-        <h3>Result:</h3>
-        <div>
-            {% if final_verdict == 'OK' %}
-                ✅ All tests passed ({{ passed }}/{{ total }})
-            {% elif final_verdict == 'WA' %}
-                ❌ Wrong Answer ({{ passed }}/{{ total }} passed)
-            {% elif final_verdict == 'TLE' %}
-                ⏱ Time Limit Exceeded
-            {% elif final_verdict == 'MLE' %}
-                💾 Memory Limit Exceeded
-            {% elif final_verdict == 'CE' %}
-                🔴 Compile Error
-            {% endif %}
-        </div>
-    {% endif %}
 
     <div class = "delete-task">  
         {% if usr == 'ADMIN'%}
