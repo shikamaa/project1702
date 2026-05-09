@@ -2,20 +2,21 @@ from flask import Flask
 from os import getenv
 from dotenv import load_dotenv
 from flask_login import LoginManager 
-
-load_dotenv()
+from tasks import celery_init_app
 
 def create_app() -> Flask:
+    load_dotenv()
     app = Flask(__name__)
     app.secret_key = getenv('SECRET_KEY')
     app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config.from_mapping(
-        CELERY = dict(
-            broker_url=getenv('REDIS_URL'), 
-            result_backend=getenv('REDIS_URL'))
+        CELERY=dict(
+            broker_url=getenv('CEL_BROKER'),
+            result_backend=getenv('CEL_BACKEND'),
+            task_ignore_result=True,
+        ),
     )
-
     from simple_urls import simple_routes
     from teacher_urls import teacher_urls
     from admin_urls import admin_routes
@@ -40,15 +41,13 @@ def create_app() -> Flask:
     def load_user(user_id):
         return db.session.get(User, int(user_id)) 
 
-    from tasks import celery_init_app
-    celery = celery_init_app(app)
-    celery = app.extensions["celery"]
-
     import logging
+    celery = celery_init_app(app)
 
     logging.basicConfig(
         filename='./logs/app.log',
         level=logging.INFO,
         format='%(levelname)s: %(message)s (%(filename)s:%(lineno)d)'
         )
+    
     return app

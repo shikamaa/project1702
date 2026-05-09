@@ -1,4 +1,3 @@
-from flask import session
 from models import User, STUDENT, TEACHER, ADMIN
 from flask_login import current_user
 from login import role_required
