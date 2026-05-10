@@ -1,45 +1,52 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title> {{ title }} </title>
+    <title>{{ title }}</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" href = "{{url_for('static',filename="style.css" )}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
     <ul>
         {% for m in menu %}
         <li>
-            <a href = "{{ url_for(m.url) }} "> {{ m.name }} </a>
+            <a href="{{ url_for(m.url) }}">{{ m.name }}</a>
         </li>
         {% endfor %}
     </ul>
-    <div class = "users-panel">
+
+    <div class="users-panel">
         <table>
             <thead>
                 <tr>
                     {% for column in columns %}
-                    <th> {{ column }} </th>
+                    <th>{{ column }}</th>
                     {% endfor %}
-                </tr>   
+                    <th>Set Role</th>
+                </tr>
             </thead>
             <tbody>
                 {% for user in users %}
-                    <tr>
-                        <td> {{ user.user_id }} </td>
-                        <td> {{user.username }} </td>
-                        <td> {{user.first_name }} </td>
-                        <td> {{user.last_name }} </td>
-                        <td> {{user.user_role.name.title() }} </td>
-                        <td> {{ user.reg_date }} </td>
-                        <td> Set role </td>
-                    </tr>
+                <tr>
+                    <td>{{ user.user_id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.user_role.name.title() }}</td>
+                    <td>{{ user.reg_date }}</td>
+                    <td>
+                        <form action="{{ url_for('admin_routes.change_user_role', user_id=user.user_id) }}" method="POST">
+                            <select name="role">
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                                <option value="moderator">Moderator</option>
+                            </select>
+                            <button type="submit">Apply</button>
+                        </form>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
-
         </table>
-
     </div>
-    
-
 </body>
 </html>

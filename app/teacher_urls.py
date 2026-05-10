@@ -98,7 +98,7 @@ def propose_task():
                 hidden_test_cases=hidden_test_cases,
                 memory_limit=memory_limit,
                 time_limit=time_limit,
-                is_active=True
+                is_active=False
             )
 
             db.session.add(new_task)
