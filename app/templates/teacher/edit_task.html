@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ title }}</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <ul>
+        {% for m in menu %}
+            <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+        {% endfor %}
+    </ul>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Edit Task: {{ task.task_name }}</h2>
+
+    <form method="POST" action="{{ url_for('teacher_urls.edit_task', task_id=task.task_id) }}">
+
+        <div>
+            <label for="task_name">Task name:</label><br>
+            <input type="text" id="task_name" name="task_name"
+                   value="{{ task.task_name }}" required>
+        </div>
+        <br>
+
+        <div>
+            <label for="task_description">Task description:</label><br>
+            <textarea id="task_description" name="task_description"
+                      rows="5" required>{{ task.task_description }}</textarea>
+        </div>
+        <br>
+
+        <div>
+            <label for="test_cases">Open test cases (JSON):</label><br>
+            <textarea id="test_cases" name="test_cases"
+                      rows="6" required>{{ task.test_cases | tojson(indent=2) }}</textarea>
+        </div>
+        <br>
+
+        <div>
+            <label for="hidden_test_cases">Hidden test cases (JSON):</label><br>
+            <textarea id="hidden_test_cases" name="hidden_test_cases"
+                      rows="6">{{ task.hidden_test_cases | tojson(indent=2) if task.hidden_test_cases else '' }}</textarea>
+        </div>
+        <br>
+
+        <div>
+            <label for="memory_limit">Memory Limit (MB):</label>
+            <input type="number" id="memory_limit" name="memory_limit"
+                   value="{{ task.memory_limit }}" step="64" required>
+        </div>
+        <br>
+
+        <div>
+            <label for="time_limit">Time Limit (sec):</label>
+            <input type="number" id="time_limit" name="time_limit"
+                   value="{{ task.time_limit }}" step="1" required>
+        </div>
+        <br>
+
+        <div>
+            <label>
+                <input type="checkbox" name="is_active" value="1"
+                       {% if task.is_active %}checked{% endif %}>
+                Active (visible to students)
+            </label>
+        </div>
+        <br>
+
+        <button type="submit">Save Changes</button>
+        <a href="{{ url_for('simple_routes.show_tasks') }}">Cancel</a>
+
+    </form>
+</body>
+</html>

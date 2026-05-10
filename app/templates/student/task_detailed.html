@@ -58,11 +58,20 @@
     </div>
 
     <div class = "delete-task">  
-        {% if usr == 'ADMIN'%}
+        {% if current_user.user_role.value == 'ADMIN' %}
             <form action="{{ url_for('admin_routes.delete_task', task_id=task.task_id) }}" method="POST">
                     <button type="submit">Delete Task</button>
             </form>
         {% endif %}
     </div>
+
+    <div class="edit-task">  
+        {% if current_user.user_role.value in ('ADMIN', 'TEACHER') %}
+            <a href="{{ url_for('teacher_urls.edit_task', task_id=task.task_id) }}">
+                <button type="button">Edit Task</button>
+            </a>
+        {% endif %}
+    </div>
+
 </body>
 </html>

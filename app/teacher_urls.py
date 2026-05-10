@@ -148,3 +148,56 @@ def review_submission(submission_id):
     db.session.commit()
     flash('Review saved.')
     return redirect(url_for('teacher_urls.all_submissions'))
+
+
+@teacher_urls.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
+@teacher_required
+def edit_task(task_id):
+    task = db.session.get(Task, task_id)
+    if task is None:
+        abort(404)
+
+    if request.method == 'POST':
+        try:
+            task.task_name = request.form.get('task_name')
+            task.task_description = request.form.get('task_description')
+
+            mem_raw  = request.form.get('memory_limit')
+            time_raw = request.form.get('time_limit')
+            if not mem_raw or not time_raw:
+                flash('Limits required!', 'error')
+                return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+
+            task.memory_limit = int(mem_raw)
+            task.time_limit   = int(time_raw)
+
+            try:
+                task.test_cases = json.loads(request.form.get('test_cases'))
+            except (ValueError, TypeError):
+                flash('JSON Error in open tests', 'error')
+                return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+
+            hidden_raw = request.form.get('hidden_test_cases')
+            if hidden_raw and hidden_raw.strip():
+                try:
+                    task.hidden_test_cases = json.loads(hidden_raw)
+                except (ValueError, TypeError):
+                    flash('JSON Error in hidden tests', 'error')
+                    return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+            else:
+                task.hidden_test_cases = None
+
+            db.session.commit()
+            flash('Task updated successfully!', 'success')
+            return redirect(url_for('simple_routes.show_tasks'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'error')
+
+    return render_template(
+        'edit_task.html',
+        title='Edit Task',
+        task=task,
+        menu=logged_user_menu()
+    )

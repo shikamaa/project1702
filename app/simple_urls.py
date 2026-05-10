@@ -22,6 +22,8 @@ simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
 @login_required
 def task_detailed(task_id: int):
+    print(current_user.user_role)
+    print(current_user)
     current_task = db.session.get(Task, task_id)
 
     if current_task is None:
@@ -83,7 +85,7 @@ def task_detailed(task_id: int):
         db.session.commit()
 
         return redirect(url_for('simple_routes.submission_detailed', submission_id = new_submission.submission_id))
-    
+
     return render_template(
         'task_detailed.html',
         title=f"Task {task_id}",
