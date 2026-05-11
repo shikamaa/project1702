@@ -22,8 +22,6 @@ simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
 @login_required
 def task_detailed(task_id: int):
-    print(current_user.user_role)
-    print(current_user)
     current_task = db.session.get(Task, task_id)
 
     if current_task is None:
@@ -218,13 +216,18 @@ def logout():
 @simple_routes.get('/tasks')
 @login_required
 def show_tasks():
-    query = select(Task).filter_by(is_active=True)
-    task_list = db.session.execute(query).scalars().all()   
+    query_active_tasks = select(Task).filter_by(is_active=True)
+    task_list = db.session.execute(query_active_tasks).scalars().all()
+
+    query_inactive_tasks = select(Task).filter_by(is_active=False)
+    disabled_tasks_list = db.session.execute(query_inactive_tasks).scalars().all()
+
     return render_template(
         'task_list.html',
         title='Main page',
         menu=logged_user_menu(),
         tasks=task_list,
+        disabled_tasks=disabled_tasks_list,
         usr = current_user.username
     )
     
@@ -239,7 +242,8 @@ def user_submissions():
         Submission.passed_tests,
         Submission.total_tests,
         Submission.submitted_at
-    ).join(Task, Task.task_id == Submission.task_id)
+    ).join(Task, Task.task_id == Submission.task_id)\
+    .where(Submission.user_id == current_user.user_id)
 
     user_submissions = (db.session.execute(query)).all()    
 
@@ -261,4 +265,3 @@ def submission_detailed(submission_id):
                          menu=logged_user_menu(),
                          submission=current_submission,
     )
-    
