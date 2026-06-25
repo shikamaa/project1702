@@ -22,7 +22,7 @@
         {% for task in tasks %}
         <div class="task-card">
             <h3>
-                <a href="{{ url_for('simple_routes.new_task_det', task_id=task.task_id) }}" class="active">
+                <a href="{{ url_for('simple_routes.task_detailed', task_id=task.task_id) }}" class="active">
                     {{ task.task_name }}
                 </a>
             </h3>
@@ -34,10 +34,28 @@
         </div>
         {% endfor %}
     </div>
-    {% else %}
     <div class="center">
-        <h1>No 'Tasks' found</h1>
+        <h1>No tasks found</h1>
     </div>
-    {% endif %} 
+    {% endif %}    
+    {% if disabled_tasks %}
+    <h3> Disabled tasks </h3>
+        <div class="tasks-list">
+            {% for task in disabled_tasks %}
+            <div class="task-card">
+                <h3>
+                    <a href="{{ url_for('simple_routes.task_detailed', task_id=task.task_id) }}" class="active">
+                        {{ task.task_name }}
+                    </a>
+                </h3>
+                <p>
+                    {% if task.task_description %}
+                        {{ task.task_description[:110] }}{% if task.task_description|length > 110 %}...{% endif %}
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 </body>
 </html>

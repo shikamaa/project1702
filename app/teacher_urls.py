@@ -1,27 +1,37 @@
 from sqlalchemy import select, update
-from flask import render_template, redirect, url_for, request, flash, Blueprint
-
+from flask import render_template, redirect, url_for, request, flash, Blueprint, abort
 import json
 from db import db
 from navigation import logged_user_menu
 from login import teacher_required
 from models import User, Task, Submission,SubmissionReview, STUDENT, ADMIN, STUDENT
 from flask_login import current_user
+import logging
 
 teacher_urls = Blueprint('teacher_urls', __name__, template_folder = 'templates/teacher/')
 
-@teacher_urls.patch('/submission/<int:submission_id>/status/<string:new_status>')
-def change_submission_status(submission_id: int, new_status: str):
-        stmt = (
-            update(Submission)
-            .where(Submission.submission_id == submission_id)
-            .values(status=new_status)
-        )
-        db.session.execute(stmt)
-        db.session.commit()
-        return redirect(url_for('all_submissions'))
+logger = logging.getLogger(__name__)
 
-@teacher_urls.route('/student_submissions')
+@teacher_urls.patch('/submission/<int:submission_id>/status/<string:new_status>')
+@teacher_required
+def change_submission_status(submission_id: int, new_status: str):
+        current_submission = db.session.get(Submission, submission_id)
+        if current_submission is not None:
+            task = db.session.get(Task, current_submission.task_id)
+            query = (
+                update(Submission)
+                .where(Submission.submission_id == submission_id).
+                values(status=new_status)
+            )
+            db.session.execute(query)
+            db.session.commit()
+            logger.info(f'User {current_user.username} change status of submission {current_submission.submission_id}: {task.task_name}')
+            flash('Status changed sucessfully')
+        else:
+            flash('Submission status changed sucessfully')   
+        return redirect(url_for('teacher_urls.all_submissions'))
+
+@teacher_urls.get('/student_submissions')
 @teacher_required
 def all_submissions():
     query = select(
@@ -81,8 +91,7 @@ def propose_task():
                     flash('JSON Error in hidden tests', 'error')
                     return redirect(url_for('teacher_urls.propose_task'))
 
-            is_active = True if current_user.user_role == ADMIN else False
-
+            
             new_task = Task(
                 task_name=task_name,
                 task_description=task_description,
@@ -90,7 +99,7 @@ def propose_task():
                 hidden_test_cases=hidden_test_cases,
                 memory_limit=memory_limit,
                 time_limit=time_limit,
-                status=is_active
+                is_active=False
             )
 
             db.session.add(new_task)
@@ -111,12 +120,15 @@ def propose_task():
         title='Commit task',
         menu=logged_user_menu())
 
-@teacher_urls.route('/submission/<int:submission_id>/review', methods=['POST'])
+@teacher_urls.post('/submission/<int:submission_id>/review')
 @teacher_required
 def review_submission(submission_id):
-    submission = Submission.query.get_or_404(submission_id)
-    submission.status = request.form.get('status')
-    submission.comment = request.form.get('comment')
+    current_submission = db.session.get(Submission, submission_id)
+    if current_submission is None:
+        abort(404)
+        
+    current_submission.status = request.form.get('status')
+    current_submission.comment = request.form.get('comment')
 
     review = SubmissionReview.query.filter_by(
         submission_id=submission_id,
@@ -137,3 +149,65 @@ def review_submission(submission_id):
     db.session.commit()
     flash('Review saved.')
     return redirect(url_for('teacher_urls.all_submissions'))
+
+
+@teacher_urls.route('/task/<int:task_id>/edit', methods=['GET', 'POST'])
+@teacher_required
+def edit_task(task_id):
+    task = db.session.get(Task, task_id)
+    if task is None:
+        abort(404)
+
+    if request.method == 'POST':
+        try:
+            task.task_name = request.form.get('task_name')
+            task.task_description = request.form.get('task_description')
+
+            mem_raw  = request.form.get('memory_limit')
+            time_raw = request.form.get('time_limit')
+            if not mem_raw or not time_raw:
+                flash('Limits required!', 'error')
+                return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+
+            task.memory_limit = int(mem_raw)
+            task.time_limit   = int(time_raw)
+
+            try:
+                task.test_cases = json.loads(request.form.get('test_cases'))
+            except (ValueError, TypeError):
+                flash('JSON Error in open tests', 'error')
+                return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+
+            hidden_raw = request.form.get('hidden_test_cases')
+            if hidden_raw and hidden_raw.strip():
+                try:
+                    task.hidden_test_cases = json.loads(hidden_raw)
+                except (ValueError, TypeError):
+                    flash('JSON Error in hidden tests', 'error')
+                    return redirect(url_for('teacher_urls.edit_task', task_id=task_id))
+            else:
+                task.hidden_test_cases = None
+
+            db.session.commit()
+            flash('Task updated successfully!', 'success')
+            return redirect(url_for('simple_routes.show_tasks'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'error')
+
+    return render_template(
+        'edit_task.html',
+        title='Edit Task',
+        task=task,
+        menu=logged_user_menu()
+    )
+
+# @teacher_urls.post('/users/ban/<int:user_id>')
+# @teacher_required
+# def ban_user(user_id: int):
+#     user_to_ban = db.session.get(User, user_id)
+#     if user_to_ban is not None:
+#         user_to_ban.user_role = "BANNED" # ADD BANNED ENUM AND CHECK IT'S ROLE
+
+#     pass

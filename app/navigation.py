@@ -1,4 +1,3 @@
-from flask import session
 from models import User, STUDENT, TEACHER, ADMIN
 from flask_login import current_user
 from login import role_required
@@ -16,7 +15,7 @@ ADMIN_MENU = (
     {"name": "Tasks", "url": "simple_routes.show_tasks"},
     {"name": "My Submissions", "url": "simple_routes.user_submissions"},
     {"name": "All Submissions", "url": "teacher_urls.all_submissions"},
-    # {"name": "Accept Tasks", "url": "admin_bp.admin_tasks"},
+    {"name": "Accept Tasks", "url": "admin_routes.admin_tasks"},
     {"name": "Commit Task", "url": "teacher_urls.propose_task"},
     {"name": "Users", "url": "admin_routes.get_users"},
     {"name": "Settings", "url": "simple_routes.settings"},

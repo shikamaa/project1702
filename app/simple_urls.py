@@ -1,41 +1,40 @@
 from flask import render_template, Blueprint, redirect, url_for, request, flash, abort, jsonify
 from flask_login import login_required, logout_user, current_user, login_user
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload, load_only
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import BadRequest
 from datetime import timedelta
 from db import db
-from models import Task, User, STUDENT, Submission, TEACHER, ADMIN, SubmissionReview
+from models import User, Task, Submission, UserType
 from navigation import logged_user_menu, unlogged_user_menu
 from functions import change_username, change_password, make_submission
-import time
 from tasks import  run_judge
 import shutil
 import uuid
 import os
 import pathlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
 
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
 @login_required
-def new_task_det(task_id):
-    current_task = db.session.execute(
-        select(Task).where(Task.task_id == task_id)
-    ).scalars().one_or_none()
+def task_detailed(task_id: int):
+    current_task = db.session.get(Task, task_id)
 
     if current_task is None:
         abort(404)
     
-    tests = list((current_task.hidden_test_cases or []) + (current_task.test_cases or []))
+    tests = list((current_task.test_cases or []) + (current_task.hidden_test_cases or []))
 
     if request.method == 'POST':
         file = request.files.get('file')
 
         if not file or not file.filename.endswith('.c'):
             flash("Only .c files are accepted")
-            return redirect(url_for('simple_routes.new_task_det', task_id=task_id))
+            return redirect(url_for('simple_routes.compile_file', task_id = task_id))
     
         submission_directory = uuid.uuid4().hex
 
@@ -45,13 +44,15 @@ def new_task_det(task_id):
         try:
             os.makedirs(upload_directory,exist_ok=True)
             os.chmod(upload_directory, 0o777)
-        except OSError as OSerr:
+        except OSError:
             abort(500)
-            print(OSerr)
 
         source_code = file.read().decode('utf-8')
         file.seek(0)
         file.save(os.path.join(upload_directory, "solution.c"))
+
+        script_path = pathlib.Path(__file__).parent / "s.sh"
+        shutil.copy(script_path, upload_directory)  
 
         for test_number, test_case in enumerate(tests, start=1):
             input_data = test_case.get("input") or ""
@@ -63,8 +64,6 @@ def new_task_det(task_id):
             answer_path = pathlib.Path(upload_directory) / f"{test_number}.ans"
             answer_path.write_text(str(answer_data))
 
-            script_path = pathlib.Path(__file__).parent / "s.sh"
-            shutil.copy(script_path, upload_directory)  
 
         new_submission = Submission(
             user_id=int(current_user.user_id),
@@ -77,16 +76,16 @@ def new_task_det(task_id):
         db.session.add(new_submission)
         db.session.commit()
 
-        celery_task  = run_judge.delay( tests,upload_directory, submission_directory, current_task.time_limit, \
+        celery_task  = run_judge.delay(tests,upload_directory, submission_directory, current_task.time_limit, \
                                current_task.memory_limit, new_submission.submission_id)
         
         new_submission.celery_task_id = celery_task.id
         db.session.commit()
 
         return redirect(url_for('simple_routes.submission_detailed', submission_id = new_submission.submission_id))
-    
+
     return render_template(
-        'new_det_task.html',
+        'task_detailed.html',
         title=f"Task {task_id}",
         task=current_task,
         menu=logged_user_menu()
@@ -96,9 +95,11 @@ def new_task_det(task_id):
 @login_required
 def submission_status(submission_id):
     query = select(Submission).where(Submission.submission_id == submission_id)
+
     sub = db.session.execute(query).scalar_one_or_none()
     if sub is None:
         abort(404)
+
     return jsonify({
         'status': sub.status.value, 
         'passed': sub.passed_tests,
@@ -117,7 +118,6 @@ def main_page():
         name=current_user
     )
     
-
 @simple_routes.errorhandler(BadRequest)
 def handle_bad_request(e):
     return ('bad request!', 400)
@@ -134,8 +134,8 @@ def signup_page():
         password = request.form.get('password')
 
         existing_user = db.session.execute(select(User).where(User.username == username)).scalar_one_or_none()
+
         if existing_user is not None:
-            print('ACCOUNT EXISTS')
             flash('User already exists')
             return render_template('registration_page.html', 
                                  title='Signup Page',
@@ -146,13 +146,14 @@ def signup_page():
             password_hash=generate_password_hash(password),
             first_name=name,
             last_name=last_name,
-            user_role=STUDENT
+            user_role=UserType.STUDENT
         )
         try:
             db.session.add(new_user)
             db.session.commit()
             login_user(new_user)
             return redirect(url_for('simple_routes.show_tasks'))
+        
         except Exception as e:
             db.session.rollback()
             flash('Database error')
@@ -175,6 +176,7 @@ def login_page():
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password_hash, password):
+            logger.info(f"User {username} logged in with success!")
             login_user(user, remember=True, duration=timedelta(minutes=30))
             return redirect(url_for('simple_routes.show_tasks'))
         
@@ -214,40 +216,24 @@ def logout():
 @simple_routes.get('/tasks')
 @login_required
 def show_tasks():
-    query = select(Task).filter_by(is_active=True)
-    task_list = db.session.execute(query).scalars().all()   
+    query_active_tasks = select(Task).filter_by(is_active=True)
+    task_list = db.session.execute(query_active_tasks).scalars().all()
+
+    query_inactive_tasks = select(Task).filter_by(is_active=False)
+    disabled_tasks_list = db.session.execute(query_inactive_tasks).scalars().all()
+
     return render_template(
         'task_list.html',
         title='Main page',
         menu=logged_user_menu(),
         tasks=task_list,
+        disabled_tasks=disabled_tasks_list,
         usr = current_user.username
     )
-
-# @simple_routes.get("/tasks/<int:task_id>")
-# @login_required
-# def show_task_detailed(task_id: int):
-#     task = db.session.get(Task, task_id)
-#     if task is None:
-#         abort(404)
-    
-#     return render_template(
-#         'task_detailed.html',
-#         title=f'Task {task_id}',
-#         menu=logged_user_menu(),
-#         task=task,
-#         output=None,
-#         usr = current_user.user_role.name 
-#     )
     
 @simple_routes.get('/user_submissions')
 @login_required
 def user_submissions():
-    # query = (
-    #         select(Submission).where(Submission.user_id == current_user.user_id).
-    #         options(load_only(Submission.submission_id, Submission.status, Submission.submitted_at, Submission.passed_tests, Submission.total_tests),
-    #         joinedload(Submission.task).load_only(Task.task_name)).order_by(Submission.submitted_at.desc())
-    #         )
     query = select(
         Submission.submission_id,
         Submission.task_id,
@@ -256,7 +242,8 @@ def user_submissions():
         Submission.passed_tests,
         Submission.total_tests,
         Submission.submitted_at
-    ).join(Task, Task.task_id == Submission.task_id)
+    ).join(Task, Task.task_id == Submission.task_id)\
+    .where(Submission.user_id == current_user.user_id)
 
     user_submissions = (db.session.execute(query)).all()    
 
@@ -271,11 +258,10 @@ def user_submissions():
 @simple_routes.get('/submission/<int:submission_id>')
 @login_required
 def submission_detailed(submission_id):
-    submission = Submission.query.get_or_404(submission_id)
-    
+    current_submission = db.session.get(Submission, submission_id)
+
     return render_template('submission_detailed.html',
                          title=f'Submission #{submission_id}',
                          menu=logged_user_menu(),
-                         submission=submission,
-                         )
-    
+                         submission=current_submission,
+    )

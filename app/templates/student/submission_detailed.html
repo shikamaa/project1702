@@ -23,11 +23,16 @@
         NO
     {% endif %}
 
-    {% if submission and submission.status.value == 'PENDING' %}
+    {% if submission and submission.status == submission.status.__class__.PENDING %}
 <script>
     const submissionId = parseInt("{{ submission.submission_id }}");
         const POLL_INTERVAL = 1500;
-        const TERMINAL = ['OK','CE','RE','TL','ML','WA','PS'];
+        const TERMINAL = [
+            'OK', 'Compilation Error', 'Runtime Error',
+            'Time Limit', 'Wall Time Limit', 'Memory Limit',
+            'Wrong Answer', 'Partial Solution', 'Security Violation',
+            'Rejected', 'Disqualified', 'Style Violation'
+        ];
 
         const interval = setInterval(async () => {
             try {
