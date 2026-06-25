@@ -8,7 +8,8 @@ class UserType(enum.Enum):
     ADMIN = 'ADMIN'
     STUDENT = 'STUDENT'
     TEACHER = 'TEACHER'
-
+    BANNED = 'BANNED'
+    
 ADMIN = UserType.ADMIN
 TEACHER = UserType.TEACHER
 STUDENT = UserType.STUDENT
@@ -59,6 +60,10 @@ class User(db.Model, UserMixin):
         
     def get_id(self):
         return str(self.user_id)
+    
+    @property
+    def is_active(self):
+        return self.user_role != UserType.BANNED  
         
 class Task(db.Model):
     __tablename__ = 'tasks'
@@ -105,3 +110,4 @@ class SubmissionReview(db.Model):
     comment = db.Column(db.Text)
     submission = db.relationship('Submission', backref='reviews')
     teacher = db.relationship('User', foreign_keys=[teacher_id])
+

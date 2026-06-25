@@ -7,6 +7,7 @@ from login import teacher_required
 from models import User, Task, Submission,SubmissionReview, STUDENT, ADMIN, STUDENT
 from flask_login import current_user
 import logging
+
 teacher_urls = Blueprint('teacher_urls', __name__, template_folder = 'templates/teacher/')
 
 logger = logging.getLogger(__name__)
@@ -201,3 +202,12 @@ def edit_task(task_id):
         task=task,
         menu=logged_user_menu()
     )
+
+# @teacher_urls.post('/users/ban/<int:user_id>')
+# @teacher_required
+# def ban_user(user_id: int):
+#     user_to_ban = db.session.get(User, user_id)
+#     if user_to_ban is not None:
+#         user_to_ban.user_role = "BANNED" # ADD BANNED ENUM AND CHECK IT'S ROLE
+
+#     pass
