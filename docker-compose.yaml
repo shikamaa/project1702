@@ -14,7 +14,7 @@ services:
       - 1702data:/var/lib/postgresql/data
       - ./uploads:/uploads
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USR}"]
+      test: ["CMD-SHELL", "pg_isready -U ${USR} -d ${DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,6 +70,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - ./.env
     environment:
@@ -78,6 +80,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock 
       - ./uploads:/uploads
       - ./logs:/app/logs
+      - ./app/migrations:/app/migrations 
     networks:
       - app-network
 
@@ -96,6 +99,22 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - app-network
+
+  migrate:
+    container_name: 1702migrate
+    build: ./app
+    command: alembic upgrade head
+    env_file:
+      - ./.env
+    volumes:
+      - ./app/migrations:/app/migrations 
+    depends_on:
+      db:
         condition: service_healthy
     networks:
       - app-network

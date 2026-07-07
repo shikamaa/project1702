@@ -45,7 +45,7 @@ def change_status_task(task_id: int):
 @admin_required
 def get_users():
     users = db.session.execute(select(User)).scalars().all()
-    fields = ["User ID", "Username", "First name", "Last name", "Role", "Registration date"]
+    fields = ["User ID", "Username", "First name", "Last name", "Role"]
     return render_template(
         'admin/user_management.html',
         title='User Management',

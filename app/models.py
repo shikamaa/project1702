@@ -48,8 +48,8 @@ class User(db.Model, UserMixin):
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), default=None)
     password_hash = db.Column(db.Text, nullable=False)
-    user_role = db.Column(SAEnum(UserType, native_enum=False), nullable=False, default=UserType.STUDENT)
-    reg_date = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+    user_role = db.Column(SAEnum(UserType), nullable=False, default=UserType.STUDENT)
+    reg_date = db.Column(db.DateTime(timezone=True), nullable=False, default=db.func.current_timestamp())
     
     def __init__(self, username, password_hash, first_name, last_name, user_role=STUDENT):
         self.username = username
@@ -88,12 +88,12 @@ class Submission(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey('usrs.user_id'), nullable=False)
     task_id = db.Column(db.BigInteger, db.ForeignKey('tasks.task_id'), nullable=False)
     code = db.Column(db.Text, nullable=False)
-    status = db.Column(SAEnum(SubmissionStatus, native_enum=False), nullable=False, default=SubmissionStatus.PENDING)
+    status = db.Column(SAEnum(SubmissionStatus), nullable=False, default=SubmissionStatus.PENDING)
     passed_tests = db.Column(db.Integer, nullable=False, default=0)
     total_tests = db.Column(db.Integer, nullable=False, default=0)
     error_message = db.Column(db.Text, default='None') 
     comment = db.Column(db.Text)
-    submitted_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=db.func.now())
     celery_task_id = db.Column(db.String(64),nullable=False)
     user_id_rel = db.relationship('User', foreign_keys=[user_id])
     task = db.relationship('Task', foreign_keys=[task_id], overlaps="submissions,tasks_ref")
@@ -102,7 +102,7 @@ class Submission(db.Model):
         return f'<Submission {self.submission_id}>'
   
 class SubmissionReview(db.Model):
-    __tablename__ = 'submission_review'
+    __tablecme__ = 'submission_review'
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     submission_id = db.Column(db.BigInteger, db.ForeignKey('submissions.submission_id'), nullable=False)
     teacher_id = db.Column(db.BigInteger, db.ForeignKey('usrs.user_id'), nullable=False)
