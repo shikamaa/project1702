@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> {{ title }} </title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
+    </head>
+    <body>
+    <ul>
+        {% for m in menu %}
+        <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
+        {% endfor %}
+    </ul>
+
+    There is no task like this
+    </body>
+</html>

@@ -12,20 +12,41 @@
     {% endfor %}
     </ul>
 
+    {% with messages = get_flashed_messages() %}
+        {% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+
     {% if submission %}
         <pre>{{ submission.code }}</pre>
 
-        <p>Status: <span id="status">{{ submission.status.value }}</span></p>
-        <p>Tests: <span id="tests">{{ submission.passed_tests }}/{{ submission.total_tests }}</span></p>
-        <p>Submitted: {{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</p>
-        <p>{{ submission.error_message }}</p>
+        <div class="status-panel">
+            <p>Status: <strong id="status">{{ submission.status.value }}</strong></p>
+            <p>Tests: <strong id="tests">{{ submission.passed_tests }}/{{ submission.total_tests }}</strong></p>
+            <p>Submitted: <strong>{{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</strong></p>
+
+            {% if current_user.user_role.name in ('TEACHER', 'ADMIN') %}
+            <form action="{{ url_for('teacher_urls.change_submission_status', submission_id=submission.submission_id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="status">
+                    {% for st in ['OK', 'Rejected', 'Reviewed', 'Ignored'] %}
+                    <option value="{{ st }}" {% if submission.status.value == st %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Set status</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if submission.error_message and submission.error_message not in ('', 'None') %}
+        <pre>{{ submission.error_message }}</pre>
+        {% endif %}
     {% else %}
-        NO
+        <div class="center"><h1>Submission not found</h1></div>
     {% endif %}
 
     {% if submission and submission.status == submission.status.__class__.PENDING %}
-<script>
-    const submissionId = parseInt("{{ submission.submission_id }}");
+    <script>
+        const submissionId = parseInt("{{ submission.submission_id }}");
         const POLL_INTERVAL = 1500;
         const TERMINAL = [
             'OK', 'Compilation Error', 'Runtime Error',

@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title> {{ title }} </title>
-        <meta charset="utf-8">
-        <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
-    </head>
-    <body>
+<head>
+    <title>{{ title }}</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
     <ul>
-        {% for m in menu %}
+    {% for m in menu %}
         <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
-        {% endfor %}
+    {% endfor %}
     </ul>
 
-        <form method="POST" action="{{ url_for('simple_routes.login_page') }}">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required><br><br>
+    {% with messages = get_flashed_messages() %}
+        {% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+    {% endwith %}
 
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required><br><br>
+    <form class="auth-card" method="POST" action="{{ url_for('simple_routes.login_page') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h2>Log in</h2>
 
-            <button type="submit">Submit</button>
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Log in</button>
     </form>
-    </body>
+</body>
 </html>

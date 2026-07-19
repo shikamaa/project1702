@@ -3,28 +3,36 @@
 <head>
     <title>{{ title }}</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="{{ url_for('static', filename = 'style.css') }} ">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <ul>
-        {% for m in menu %}
+    {% for m in menu %}
         <li><a href="{{ url_for(m.url) }}">{{ m.name }}</a></li>
-        {% endfor %}
+    {% endfor %}
     </ul>
-<form method="POST" action="{{ url_for('simple_routes.signup_page') }}">
-    <label for="first_name">Name</label>
-    <input type="text" id="first_name" name="first_name" required><br><br>
 
-    <label for="last_name">Last name</label>
-    <input type="text" id="last_name" name="last_name"><br><br>
+    {% with messages = get_flashed_messages() %}
+        {% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+    {% endwith %}
 
-    <label for="username">Username</label>
-    <input type="text" id="username" name="username" required><br><br>
+    <form class="auth-card" method="POST" action="{{ url_for('simple_routes.signup_page') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h2>Sign up</h2>
 
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" required><br><br>
+        <label for="first_name">Name</label>
+        <input type="text" id="first_name" name="first_name" required>
 
-    <input type="submit" value="Submit">
-</form>
+        <label for="last_name">Last name</label>
+        <input type="text" id="last_name" name="last_name">
+
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit">Sign up</button>
+    </form>
 </body>
 </html>

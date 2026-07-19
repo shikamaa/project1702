@@ -17,8 +17,12 @@
         <h3>Hello, {{ usr }}. Good luck!</h3>
     </div>
 
+    {% with messages = get_flashed_messages() %}
+        {% for msg in messages %}<div class="flash">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+
     {% if tasks %}
-     <div class="tasks-list">
+    <div class="tasks-list">
         {% for task in tasks %}
         <div class="task-card">
             <h3>
@@ -34,28 +38,30 @@
         </div>
         {% endfor %}
     </div>
+    {% else %}
     <div class="center">
         <h1>No tasks found</h1>
     </div>
-    {% endif %}    
-    {% if disabled_tasks %}
-    <h3> Disabled tasks </h3>
-        <div class="tasks-list">
-            {% for task in disabled_tasks %}
-            <div class="task-card">
-                <h3>
-                    <a href="{{ url_for('simple_routes.task_detailed', task_id=task.task_id) }}" class="active">
-                        {{ task.task_name }}
-                    </a>
-                </h3>
-                <p>
-                    {% if task.task_description %}
-                        {{ task.task_description[:110] }}{% if task.task_description|length > 110 %}...{% endif %}
-                    {% endif %}
-                </p>
-            </div>
-            {% endfor %}
+    {% endif %}
+
+    {% if disabled_tasks and current_user.user_role.name in ('TEACHER', 'ADMIN') %}
+    <h3 style="margin: 20px;">Disabled tasks</h3>
+    <div class="tasks-list">
+        {% for task in disabled_tasks %}
+        <div class="task-card">
+            <h3>
+                <a href="{{ url_for('simple_routes.task_detailed', task_id=task.task_id) }}" class="active">
+                    {{ task.task_name }}
+                </a>
+            </h3>
+            <p>
+                {% if task.task_description %}
+                    {{ task.task_description[:110] }}{% if task.task_description|length > 110 %}...{% endif %}
+                {% endif %}
+            </p>
         </div>
-        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
 </body>
 </html>
