@@ -13,8 +13,8 @@ import requests
 load_dotenv()
 logger = get_task_logger(__name__)
 
-MAX_OUT_BYTES = 5 * 1024 * 1024   # больше этого .out не читаем
-MAX_ERR_LEN = 4000                # обрезка error_message для БД/страницы
+MAX_OUT_BYTES = 5 * 1024 * 1024
+MAX_ERR_LEN = 4000
 
 
 def celery_init_app(app: Flask) -> Celery:
