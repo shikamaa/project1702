@@ -47,12 +47,8 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
     host_uploads = os.environ.get('HOST_UPLOADS')
     mem_kb = mem * 1024
 
-    # п.6: контейнеру — запас над лимитом задачи, чтобы не душить gcc.
-    # Лимит задачи enforce'ится через ulimit -v в s.sh и %M-проверку ниже.
     container_mem = max(mem + 128, 256)
 
-    # п.5: общий бюджет времени на контейнер:
-    # 10с компиляция + (timeout + 1с накладных) на тест + 10с запас.
     budget = 10 + len(tests) * (timeout + 1) + 10
 
     container = None
@@ -60,12 +56,12 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
         docker_tester = docker.from_env()
         container = docker_tester.containers.run(
             'judge',
-            detach=True,                      # ждём сами, с таймаутом
+            detach=True,
             network_disabled=True,
             volumes={f'{host_uploads}/{submission_directory}': {'bind': '/uploads', 'mode': 'rw'}},
             mem_limit=f'{container_mem}m',
             memswap_limit=f'{container_mem}m',
-            nano_cpus=1_000_000_000,          # 1 CPU; cpu_count работал только на Windows
+            nano_cpus=1_000_000_000,
             pids_limit=64,
             user='nobody',
             cap_drop=['ALL'],
@@ -77,13 +73,11 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
         try:
             exit_code = container.wait(timeout=budget).get('StatusCode', 1)
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
-            # п.5: контейнер не уложился в бюджет — убиваем, слот не виснет
             logger.error("judge exceeded budget %ss for submission %s", budget, submission_id)
             return _finish(submission_id, SubmissionStatus.CHECK_FAILED,
                            0, "judge time budget exceeded")
 
         if exit_code == 1:
-            # s.sh завершается с 1 только при ошибке компиляции
             compile_text = ""
             compile_log = pathlib.Path(upload_directory) / 'compile.log'
             if compile_log.exists():
@@ -93,13 +87,10 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
                            0, compile_text or "compilation failed")
 
         if exit_code != 0:
-            # сломался сам скрипт/шелл, решение ни при чём
             logger.error("judge script exited with %s for submission %s",
                          exit_code, submission_id)
             return _finish(submission_id, SubmissionStatus.CHECK_FAILED,
                            0, "judge internal error")
-
-        # ---- разбор результатов ----
 
         raw_metrics = {}
         results_csv = pathlib.Path(upload_directory) / 'results.csv'
@@ -108,7 +99,7 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
                 parts = line.split(',')
                 if len(parts) != 3:
                     continue
-                try:  # п.4: кривая строка не должна ронять таску
+                try:
                     raw_metrics[int(parts[0])] = {'exit': int(parts[1]),
                                                   'mem': int(parts[2])}
                 except ValueError:
@@ -135,7 +126,6 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
                 elif ec in (137, 9) or mem_used >= mem_kb:
                     verdict = SubmissionStatus.MEMORY_LIMIT.value
                 elif ec == 153:
-                    # SIGXFSZ: упёрся в ulimit -f (слишком много вывода)
                     verdict = SubmissionStatus.RUNTIME_ERROR.value
                     re_details.append(f"Test {test_number}: RE (output limit exceeded)")
                 elif ec != 0:
@@ -145,11 +135,9 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
                     verdict = SubmissionStatus.RUNTIME_ERROR.value
                     re_details.append(f"Test {test_number}: RE (No output file)")
                 elif out_path.stat().st_size > MAX_OUT_BYTES:
-                    # п.5: страховка от чтения гигантского файла в память воркера
                     verdict = SubmissionStatus.RUNTIME_ERROR.value
                     re_details.append(f"Test {test_number}: RE (output too large)")
                 else:
-                    # п.4: errors='replace' — вывод программы может быть не-UTF-8
                     out = out_path.read_text(errors='replace').strip()
                     ans = str(test_case.get("output") or "").strip()
                     verdict = (SubmissionStatus.OK.value if out == ans
@@ -181,17 +169,15 @@ def run_judge(tests: list, upload_directory: str, submission_directory: str,
         return _finish(submission_id, SubmissionStatus.REJECTED, 0, "docker api error")
 
     except Exception:
-        # п.4: любая непредвиденная ошибка — статус вместо вечного PENDING
         logger.exception("judge task failed for submission %s", submission_id)
-        db.session.rollback()  # сессия могла остаться в битом состоянии
+        db.session.rollback()
         sub = db.session.get(Submission, submission_id)
         if sub:
             sub.status = SubmissionStatus.CHECK_FAILED
             db.session.commit()
-        raise  # Celery честно пометит таску как FAILURE
+        raise
 
     finally:
-        # выполняется на всех путях: успех, любой return, любое исключение
         if container is not None:
             try:
                 container.remove(force=True)

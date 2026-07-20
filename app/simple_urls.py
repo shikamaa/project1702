@@ -7,19 +7,21 @@ from datetime import timedelta
 from db import db
 from models import User, Task, Submission, UserType
 from navigation import logged_user_menu, unlogged_user_menu
-from functions import change_username, change_password
+from utils.utils import change_username, change_password
 from tasks import  run_judge
 import shutil
 import uuid
 import os
 import pathlib
 import logging
+from __init__ import limiter
 
 logger = logging.getLogger(__name__)
 
 simple_routes = Blueprint('simple_routes', __name__, template_folder ='templates/student/')
 
 @simple_routes.route("/task/<int:task_id>", methods=['GET', 'POST'])
+@limiter.limit("3 per minute", methods=["POST"])
 @login_required
 def task_detailed(task_id: int):
     current_task = db.session.get(Task, task_id)

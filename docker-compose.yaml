@@ -55,21 +55,18 @@ services:
     sysctls:
       - net.core.somaxconn=65535
 
-  # Фильтрующий прокси перед Docker-сокетом: настоящий сокет смонтирован
-  # только сюда (и read-only), воркер ходит к прокси по TCP внутри сети.
-  # Всё, что не разрешено флагами ниже, прокси отвечает 403.
   docker-proxy:
     image: tecnativa/docker-socket-proxy
     container_name: 1702dockerproxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - CONTAINERS=1      # list/inspect/wait контейнеров
-      - POST=1            # POST-запросы в принципе (create, kill, ...)
-      - ALLOW_START=1     # containers.run = create + start
-      - ALLOW_STOP=1      # kill/stop при превышении бюджета
-      - DELETE=1          # container.remove(force=True) в finally
-      - IMAGES=1          # docker-py проверяет наличие образа judge
+      - CONTAINERS=1
+      - POST=1
+      - ALLOW_START=1
+      - ALLOW_STOP=1
+      - DELETE=1
+      - IMAGES=1
     restart: unless-stopped
     networks:
       - app-network
@@ -141,6 +138,26 @@ services:
       dockerfile: judge.Dockerfile
     image: judge:latest
     profiles: ["build-only"]
+
+  backup:
+      image: postgres:15-alpine
+      container_name: 1702backup
+      depends_on:
+        db:
+          condition: service_healthy
+      volumes:
+        - ./backups:/backups
+      environment:
+        PGPASSWORD: ${PASSWORD}
+      entrypoint: >
+        sh -c 'while true; do
+          pg_dump -h db -U ${USR} ${DB} | gzip > /backups/db-$(date +%F-%H-%M-%S).sql.gz;
+          find /backups -name "*.sql.gz" -mtime +14 -delete;
+          sleep 86400;
+        done'
+      restart: unless-stopped
+      networks:
+        - app-network
 
 volumes:
   1702data:
