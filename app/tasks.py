@@ -1,4 +1,4 @@
-from celery import Celery, shared_task, Task as CelTask
+from celery import shared_task
 from celery.utils.log import get_task_logger
 from flask import Flask
 import docker
@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import os
 import shutil
 import pathlib
-
 from db import db
 from models import Submission, SubmissionStatus
 
@@ -16,19 +15,6 @@ logger = get_task_logger(__name__)
 
 MAX_OUT_BYTES = 5 * 1024 * 1024
 MAX_ERR_LEN = 4000
-
-def celery_init_app(app: Flask) -> Celery:
-    class FlaskTask(CelTask):
-        def __call__(self, *args: object, **kwargs: object) -> object:
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery_app = Celery(app.name, task_cls=FlaskTask)
-    celery_app.config_from_object(app.config["CELERY"])
-    celery_app.set_default()
-    app.extensions["celery"] = celery_app
-    return celery_app
-
 
 def _finish(submission_id, status, passed=0, error_message=""):
     sub = db.session.get(Submission, submission_id)

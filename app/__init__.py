@@ -1,21 +1,33 @@
 from flask import Flask, flash, redirect, request, url_for
-from os import getenv
-from dotenv import load_dotenv
-from flask_login import LoginManager
-from tasks import celery_init_app
+from flask_login import LoginManager, current_user
+from flask_limiter import Limiter
 from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
-import logging
-from flask_limiter import Limiter
-from utils.accounts import get_user_or_ip
 from werkzeug.exceptions import TooManyRequests
-from flask_login import current_user
+import logging
+from os import getenv
+from dotenv import load_dotenv
+from celery import Celery, Task
+
+from utils.accounts import get_user_or_ip
 
 limiter = Limiter(
     key_func=get_user_or_ip,
     default_limits=[],
 )
 
+def celery_init_app(app: Flask) -> Celery:
+    class FlaskTask(Task):
+        def __call__(self, *args:object, **kwargs: object) -> object:
+            with app.app_context():
+                return self.run(*args,**kwargs)
+            
+    celery_app = Celery(app.name, task_cls=FlaskTask)
+    celery_app.config_from_object(app.config["CELERY"])
+    celery_app.set_default()
+    app.extensions["celery"] = celery_app
+    return celery_app
+          
 def create_app() -> Flask:
     load_dotenv()
     app = Flask(__name__)
@@ -35,9 +47,11 @@ def create_app() -> Flask:
             broker_url=getenv('CEL_BROKER'),
             result_backend=getenv('CEL_BACKEND'),
             task_ignore_result=True,
-            task_time_limit=600
+            task_time_limit=300
         ),
     )
+    app.config.from_prefixed_env()
+    celery_init_app(app)
     app.config["RATELIMIT_STORAGE_URI"] = getenv('CEL_BROKER')
     app.config["RATELIMIT_STRATEGY"] = "moving-window"
     limiter.init_app(app)
@@ -73,8 +87,6 @@ def create_app() -> Flask:
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    celery = celery_init_app(app)
-
     logging.basicConfig(
         filename='./logs/app.log',
         level=logging.INFO,
@@ -92,3 +104,4 @@ def create_app() -> Flask:
         return redirect(request.referrer or url_for('simple_routes.main_page'))
 
     return app
+
