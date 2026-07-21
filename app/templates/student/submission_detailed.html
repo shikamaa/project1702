@@ -17,14 +17,38 @@
     {% endwith %}
 
     {% if submission %}
+        {% set can_manage = current_user.user_role.name in ('TEACHER', 'ADMIN') %}
+        {% set badge_map = {
+            'OK': 'badge-ok',
+            'Reviewed': 'badge-ok',
+            'Accepted Testing': 'badge-ok',
+            'Compilation Error': 'badge-fail',
+            'Runtime Error': 'badge-fail',
+            'Wrong Answer': 'badge-fail',
+            'Time Limit': 'badge-fail',
+            'Wall Time Limit': 'badge-fail',
+            'Memory Limit': 'badge-fail',
+            'Security Violation': 'badge-fail',
+            'Disqualified': 'badge-fail',
+            'Rejected': 'badge-fail',
+            'Check Failed': 'badge-fail',
+            'Partial Solution': 'badge-warn',
+            'Presentation Error': 'badge-warn',
+            'Ignored': 'badge-warn'
+        } %}
+
         <pre>{{ submission.code }}</pre>
 
         <div class="status-panel">
-            <p>Status: <strong id="status">{{ submission.status.value }}</strong></p>
+            <p>Status:
+                <span id="status" class="badge {{ badge_map.get(submission.status.value, 'badge-pending') }}">
+                    {{ submission.status.value }}
+                </span>
+            </p>
             <p>Tests: <strong id="tests">{{ submission.passed_tests }}/{{ submission.total_tests }}</strong></p>
             <p>Submitted: <strong>{{ submission.submitted_at.strftime('%d.%m.%Y %H:%M') }}</strong></p>
 
-            {% if current_user.user_role.name in ('TEACHER', 'ADMIN') %}
+            {% if can_manage %}
             <form action="{{ url_for('teacher_urls.change_submission_status', submission_id=submission.submission_id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <select name="status">
@@ -44,26 +68,37 @@
         <div class="center"><h1>Submission not found</h1></div>
     {% endif %}
 
-    {% if submission and submission.status == submission.status.__class__.PENDING %}
+    {% set pending_states = [
+        submission.status.__class__.PENDING,
+        submission.status.__class__.PENDING_CHECK
+    ] if submission else [] %}
+
+{% if submission and submission.status.name in ('PENDING', 'PENDING_CHECK') %}
     <script>
         const submissionId = parseInt("{{ submission.submission_id }}");
         const POLL_INTERVAL = 1500;
-        const TERMINAL = [
-            'OK', 'Compilation Error', 'Runtime Error',
-            'Time Limit', 'Wall Time Limit', 'Memory Limit',
-            'Wrong Answer', 'Partial Solution', 'Security Violation',
-            'Rejected', 'Disqualified', 'Style Violation'
-        ];
+        const PENDING = ['Pending', 'Pending Check'];
+
+        const badgeClass = (status) => {
+            const ok = ['OK', 'Reviewed', 'Accepted Testing'];
+            const warn = ['Partial Solution', 'Presentation Error', 'Ignored'];
+            if (ok.includes(status)) return 'badge badge-ok';
+            if (warn.includes(status)) return 'badge badge-warn';
+            if (PENDING.includes(status)) return 'badge badge-pending';
+            return 'badge badge-fail';
+        };
 
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`/submission/${submissionId}/status`);
                 const data = await res.json();
 
-                document.getElementById('status').textContent = data.status;
+                const el = document.getElementById('status');
+                el.textContent = data.status;
+                el.className = badgeClass(data.status);
                 document.getElementById('tests').textContent = `${data.passed}/${data.total}`;
 
-                if (TERMINAL.includes(data.status)) {
+                if (!PENDING.includes(data.status)) {
                     clearInterval(interval);
                     location.reload();
                 }

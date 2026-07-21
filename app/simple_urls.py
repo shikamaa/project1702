@@ -6,8 +6,8 @@ from werkzeug.exceptions import BadRequest
 from datetime import timedelta
 from db import db
 from models import User, Task, Submission, UserType
-from navigation import logged_user_menu, unlogged_user_menu
-from utils.utils import change_username, change_password
+from utils.navigation import logged_user_menu, unlogged_user_menu
+from utils.accounts import change_username, change_password
 from tasks import  run_judge
 import shutil
 import uuid

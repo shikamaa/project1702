@@ -7,8 +7,7 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 import logging
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from utils.utils import get_user_or_ip
+from utils.accounts import get_user_or_ip
 from werkzeug.exceptions import TooManyRequests
 from flask_login import current_user
 

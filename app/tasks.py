@@ -1,21 +1,21 @@
 from celery import Celery, shared_task, Task as CelTask
 from celery.utils.log import get_task_logger
+from flask import Flask
+import docker
+import requests
 from dotenv import load_dotenv
 import os
 import shutil
 import pathlib
+
 from db import db
 from models import Submission, SubmissionStatus
-from flask import Flask
-import docker
-import requests
 
 load_dotenv()
 logger = get_task_logger(__name__)
 
 MAX_OUT_BYTES = 5 * 1024 * 1024
 MAX_ERR_LEN = 4000
-
 
 def celery_init_app(app: Flask) -> Celery:
     class FlaskTask(CelTask):
@@ -31,7 +31,6 @@ def celery_init_app(app: Flask) -> Celery:
 
 
 def _finish(submission_id, status, passed=0, error_message=""):
-    """Единая точка записи результата в БД."""
     sub = db.session.get(Submission, submission_id)
     if sub:
         sub.status = status
@@ -39,7 +38,6 @@ def _finish(submission_id, status, passed=0, error_message=""):
         sub.error_message = error_message[:MAX_ERR_LEN]
         db.session.commit()
     return status.value, passed, error_message
-
 
 @shared_task(ignore_result=False)
 def run_judge(tests: list, upload_directory: str, submission_directory: str,

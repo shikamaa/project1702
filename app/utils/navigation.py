@@ -1,6 +1,5 @@
-from models import User, STUDENT, TEACHER, ADMIN
+from models import STUDENT, TEACHER, ADMIN
 from flask_login import current_user
-from login import role_required
 
 TEACHER_MENU = (
             {"name": "Tasks", "url": "simple_routes.show_tasks"},

@@ -1,14 +1,16 @@
 from flask import Blueprint, flash, redirect, url_for, render_template, abort, request
-from login import admin_required, current_user
+
 import logging
 from sqlalchemy import select
 from db import db
 from models import Task, User, UserType
-from navigation import logged_user_menu
+
+from utils.navigation import logged_user_menu
+
+from utils.permissions import admin_required, current_user
 
 admin_routes = Blueprint('admin_routes', __name__, url_prefix='/admin', template_folder='templates/admin/')
 logger = logging.getLogger(__name__)
-
 
 @admin_routes.post('/tasks/delete/<int:task_id>')
 @admin_required
@@ -22,7 +24,6 @@ def delete_task(task_id: int):
     else:
         flash(f'Task {task_id} not found')
     return redirect(url_for('simple_routes.show_tasks'))
-
 
 @admin_routes.post('/tasks/change-status-task/<int:task_id>')
 @admin_required
@@ -101,8 +102,8 @@ def approve_task(task_id: int):
     db.session.commit()
     logger.info(f'Admin {current_user.username} approved task {task_id}: {task.task_name}')
     flash(f'Task "{task.task_name}" approved.')
-    return redirect(url_for('admin_routes.admin_tasks'))
 
+    return redirect(url_for('admin_routes.admin_tasks'))
 
 @admin_routes.post('/tasks/reject/<int:task_id>')
 @admin_required
@@ -115,4 +116,5 @@ def reject_task(task_id: int):
     db.session.commit()
     logger.info(f'Admin {current_user.username} rejected and deleted task {task_id}: {task_name}')
     flash(f'Task "{task_name}" rejected and removed.')
+
     return redirect(url_for('admin_routes.admin_tasks'))

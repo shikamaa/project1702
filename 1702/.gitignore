@@ -1,9 +1,0 @@
-bin
-include
-lib
-lib64
-.env
-pyvenv.cfg
-logs/
-up
-uploads/*

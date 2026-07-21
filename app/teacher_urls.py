@@ -2,8 +2,8 @@ from sqlalchemy import select
 from flask import render_template, redirect, url_for, request, flash, Blueprint, abort
 import json
 from db import db
-from navigation import logged_user_menu
-from login import teacher_required
+from utils.navigation import logged_user_menu
+from utils.permissions import teacher_required
 from models import User, Task, Submission, SubmissionStatus
 from flask_login import current_user
 import logging
