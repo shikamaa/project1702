@@ -19,4 +19,4 @@ This web application provides a secure platform for user management and C code c
 This project is part of Summer School 1702. For questions or contributions, please contact the development team.
 
 ## License
-Educational use only - Summer School 1702
+Educational use only - Summer School 1702.

@@ -134,7 +134,7 @@ services:
   judge:
     container_name: 1702judge
     build:
-      context: ./judge
+      context: ./app
       dockerfile: judge.Dockerfile
     image: judge:latest
     profiles: ["build-only"]
