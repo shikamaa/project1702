@@ -13,3 +13,4 @@ docker==7.1.0
 gunicorn==25.3.0
 requests==2.34.2
 flask-limiter==4.1.1
+locust==2.46.1
