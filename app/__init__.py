@@ -9,7 +9,7 @@ from os import getenv
 from dotenv import load_dotenv
 from celery import Celery, Task
 
-from utils.accounts import get_user_or_ip
+from utils.get_user import get_user_or_ip
 
 limiter = Limiter(
     key_func=get_user_or_ip,
