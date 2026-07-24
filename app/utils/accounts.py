@@ -1,17 +1,10 @@
 from flask import flash, redirect,url_for
 from flask_login import current_user
-from flask_limiter.util import get_remote_address
 from sqlalchemy import select
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from db import db
 from models import User
-
-def get_user_or_ip():
-    if current_user.is_authenticated:
-        return f"{current_user.user_id}"
-    
-    return get_remote_address()
 
 def change_username(new_username):
     if current_user.username == new_username:
